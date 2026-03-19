@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SmartAssist — Live Session</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--surface:#0c1018;--card:#111520;--card2:#161c29;
+  --border:#1c2535;--border2:#253045;
+  --accent:#00e5a0;--accent-d:#00b87d;
+  --blue:#3ba7ff;--orange:#ff8c42;--red:#ff4646;--purple:#9d6cff;
+  --text:#dde4f0;--muted:#4a5a72;--muted2:#2e3d52;
+  --squat:#3ba7ff;--plank:#9d6cff;
+  --ff-display:'Bebas Neue',sans-serif;
+  --ff-mono:'DM Mono',monospace;
+  --ff-body:'DM Sans',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ff-body);overflow:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:.35}
+
+/* ── Nav ──────────────────────────────────────────────────────── */
+nav{height:50px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.5rem;border-bottom:1px solid var(--border);
+  background:rgba(7,9,14,.95);backdrop-filter:blur(12px);z-index:100;flex-shrink:0}
+.nav-logo{font-family:var(--ff-display);font-size:1.5rem;color:var(--accent);letter-spacing:.04em}
+.nav-sub{font-family:var(--ff-mono);font-size:.55rem;color:var(--muted);
+  letter-spacing:.12em;text-transform:uppercase;margin-left:8px}
+.nav-links{display:flex;gap:6px}
+.nav-link{padding:5px 12px;border-radius:5px;font-size:.75rem;font-weight:500;
+  text-decoration:none;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;transition:all .2s}
+.nav-link:hover{color:var(--text);background:var(--card2)}
+.nav-link.active{color:var(--accent);background:rgba(0,229,160,.08)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.session-timer{font-family:var(--ff-mono);font-size:.9rem;color:var(--text);
+  background:var(--card2);padding:4px 12px;border-radius:6px;border:1px solid var(--border2)}
+.live-badge{display:flex;align-items:center;gap:6px;font-family:var(--ff-mono);
+  font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--red)}
+.live-dot.on{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.workspace{display:grid;grid-template-columns:1fr 308px;height:calc(100vh - 50px);overflow:hidden}
+
+/* ── Video column ─────────────────────────────────────────────── */
+.video-col{display:flex;flex-direction:column;padding:12px 10px 12px 14px;gap:10px;min-height:0}
+.video-frame{position:relative;flex:1;border-radius:10px;overflow:hidden;
+  background:#000;border:1px solid var(--border);min-height:0}
+.video-frame img{width:100%;height:100%;object-fit:contain;display:block}
+
+.hc{position:absolute;width:20px;height:20px;border-color:var(--accent);border-style:solid;opacity:.6}
+.hc-tl{top:10px;left:10px;border-width:2px 0 0 2px}
+.hc-tr{top:10px;right:10px;border-width:2px 2px 0 0}
+.hc-bl{bottom:10px;left:10px;border-width:0 0 2px 2px}
+.hc-br{bottom:10px;right:10px;border-width:0 2px 2px 0}
+
+.scan-line{position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  animation:scan 4s linear infinite;opacity:.45}
+@keyframes scan{0%{top:0;opacity:.45}95%{top:100%;opacity:.45}100%{top:100%;opacity:0}}
+
+.no-feed{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;background:var(--surface);color:var(--muted)}
+.spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--accent);
+  border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.no-feed p{font-family:var(--ff-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
+
+/* Goal progress bar (overlaid bottom of video) */
+.goal-bar-wrap{
+  position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(0,0,0,.5);
+}
+.goal-bar-fill{
+  height:100%;background:var(--accent);transition:width .5s ease;width:0%;
+}
+.goal-bar-fill.warn{background:var(--orange)}
+.goal-bar-fill.done{background:var(--accent);animation:goal-pulse 1s ease 3}
+@keyframes goal-pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.goal-label-overlay{
+  position:absolute;bottom:10px;right:14px;
+  font-family:var(--ff-mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);
+}
+
+/* Exercise switcher */
+.ex-switcher{display:flex;gap:8px}
+.ex-sw-btn{flex:1;padding:8px 0;border-radius:7px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);cursor:pointer;font-family:var(--ff-display);
+  font-size:1.05rem;letter-spacing:.06em;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.ex-sw-btn:hover{border-color:var(--border2);color:var(--text)}
+.ex-sw-btn.squat-active{background:rgba(59,167,255,.1);border-color:var(--squat);color:var(--squat)}
+.ex-sw-btn.plank-active{background:rgba(157,108,255,.1);border-color:var(--plank);color:var(--plank)}
+
+/* ── Side panel ───────────────────────────────────────────────── */
+.side{display:flex;flex-direction:column;gap:9px;padding:12px 14px 12px 0;overflow-y:auto}
+.side::-webkit-scrollbar{width:3px}
+.side::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.ch{padding:8px 13px;font-family:var(--ff-mono);font-size:.6rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.cb{padding:12px}
+
+/* Big stat */
+.big-num{font-family:var(--ff-display);font-size:3.5rem;line-height:1;
+  transition:color .3s;letter-spacing:.02em}
+.big-num.squat-col{color:var(--squat)}
+.big-num.plank-col{color:var(--plank)}
+.big-num.flash{animation:pop .22s ease}
+@keyframes pop{0%{transform:scale(1.2)}100%{transform:scale(1)}}
+.big-unit{font-family:var(--ff-mono);font-size:.72rem;color:var(--muted)}
+
+/* Goal progress in card */
+.goal-progress{margin-top:10px}
+.gp-label{font-family:var(--ff-mono);font-size:.6rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:5px}
+.gp-bar{height:5px;background:var(--surface);border-radius:3px;overflow:hidden}
+.gp-fill{height:100%;border-radius:3px;background:var(--accent);
+  transition:width .4s ease,background .3s}
+.gp-fill.done{background:#ffd700}
+
+/* Stages */
+.stages{display:flex;gap:6px;margin-top:9px}
+.stage-p{flex:1;text-align:center;padding:6px;border-radius:5px;font-family:var(--ff-display);
+  font-size:.9rem;letter-spacing:.1em;background:var(--surface);color:var(--muted2);
+  border:1px solid var(--border);transition:all .22s}
+.stage-p.up-on{background:rgba(0,229,160,.1);border-color:var(--accent);color:var(--accent)}
+.stage-p.down-on{background:rgba(59,167,255,.1);border-color:var(--squat);color:var(--squat)}
+
+/* Angle gauges */
+.gauges{display:flex;flex-direction:column;gap:7px}
+.g-row{display:flex;align-items:center;gap:7px}
+.g-lbl{font-family:var(--ff-mono);font-size:.58rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);width:50px;flex-shrink:0}
+.g-bar{flex:1;height:5px;background:var(--surface);border-radius:3px;overflow:hidden}
+.g-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s,background .3s}
+.g-fill.warn{background:var(--red)}
+.g-val{font-family:var(--ff-mono);font-size:.68rem;color:var(--text);width:40px;text-align:right;flex-shrink:0}
+
+/* Plank gauge */
+.plank-gauge{display:flex;gap:10px;align-items:center;justify-content:center;padding:2px 0}
+.vbar-wrap{width:14px;height:90px;background:var(--surface);border-radius:7px;overflow:hidden;position:relative}
+.vbar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:7px;
+  transition:height .35s,background .3s;background:var(--accent)}
+.vbar-fill.warn{background:var(--red)}
+.vbar-labels{display:flex;flex-direction:column;justify-content:space-between;height:90px;
+  font-family:var(--ff-mono);font-size:.55rem;color:var(--muted)}
+.plank-status{display:flex;flex-direction:column;align-items:center;gap:3px}
+.ps-val{font-family:var(--ff-display);font-size:1.7rem;line-height:1}
+.ps-sub{font-family:var(--ff-mono);font-size:.56rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+.ps-badge{font-family:var(--ff-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;margin-top:3px}
+.ps-badge.ok{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
+.ps-badge.err{background:rgba(255,70,70,.08);color:#ff8080;border:1px solid rgba(255,70,70,.18)}
+
+/* Feedback */
+.fb-list{display:flex;flex-direction:column;gap:5px;min-height:50px}
+.fb-item{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;border-radius:5px;
+  font-size:.74rem;line-height:1.4;animation:fbi .2s ease}
+@keyframes fbi{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.fb-item.ok{background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.13);color:#9ff0d4}
+.fb-item.err{background:rgba(255,70,70,.07);border:1px solid rgba(255,70,70,.18);color:#ffaaaa}
+.fb-ic{font-size:.85rem;flex-shrink:0;margin-top:1px}
+
+/* ── Voice Coach panel ────────────────────────────────────────── */
+.voice-panel{background:var(--card);border:1px solid var(--border);border-radius:9px;overflow:hidden;flex-shrink:0}
+.voice-panel.active-coach{border-color:rgba(157,108,255,.35);box-shadow:0 0 20px rgba(157,108,255,.07)}
+
+.ptt-area{padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.ptt-btn{
+  width:64px;height:64px;border-radius:50%;border:2px solid var(--border2);
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .15s;font-size:1.4rem;
+  user-select:none;-webkit-user-select:none;
+}
+.ptt-btn:hover{border-color:var(--purple);background:rgba(157,108,255,.08)}
+.ptt-btn.recording{
+  background:rgba(255,70,70,.14);border-color:var(--red);
+  animation:rec-pulse 1s infinite;
+}
+.ptt-btn.processing{background:rgba(157,108,255,.1);border-color:var(--purple)}
+@keyframes rec-pulse{
+  0%,100%{box-shadow:0 0 0 6px rgba(255,70,70,.1),0 0 0 14px rgba(255,70,70,.04)}
+  50%    {box-shadow:0 0 0 10px rgba(255,70,70,.16),0 0 0 20px rgba(255,70,70,.07)}
+}
+
+.ptt-label{font-family:var(--ff-mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ptt-label.rec-label{color:var(--red)}
+.ptt-label.proc-label{color:var(--purple)}
+
+.waveform{display:flex;align-items:center;gap:2px;height:20px;opacity:0;transition:opacity .2s}
+.waveform.show{opacity:1}
+.wv-bar{width:3px;border-radius:2px;background:var(--red);animation:wave .7s ease-in-out infinite;transform-origin:bottom}
+.wv-bar:nth-child(1){animation-delay:0s;height:7px}.wv-bar:nth-child(2){animation-delay:.1s;height:12px}
+.wv-bar:nth-child(3){animation-delay:.2s;height:18px}.wv-bar:nth-child(4){animation-delay:.15s;height:20px}
+.wv-bar:nth-child(5){animation-delay:.05s;height:15px}.wv-bar:nth-child(6){animation-delay:.25s;height:10px}
+.wv-bar:nth-child(7){animation-delay:.1s;height:7px}
+@keyframes wave{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+
+/* Speaking / auto-coach indicator */
+.coach-indicator{
+  display:none;align-items:center;gap:5px;font-family:var(--ff-mono);
+  font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;
+}
+.coach-indicator.show{display:flex}
+.coach-indicator.speaking{color:var(--purple)}
+.coach-indicator.auto{color:var(--orange)}
+.ci-dot{width:5px;height:5px;border-radius:50%;animation:blink .8s infinite}
+.speaking .ci-dot{background:var(--purple)}
+.auto .ci-dot{background:var(--orange)}
+
+.voice-transcript{border-top:1px solid var(--border);padding:9px 13px;display:flex;flex-direction:column;gap:7px}
+.vt-row{display:flex;flex-direction:column;gap:2px}
+.vt-who{font-family:var(--ff-mono);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)}
+.vt-text{font-size:.74rem;line-height:1.4}
+.vt-text.you{color:var(--text)}
+.vt-text.coach{color:#c4b0ff;font-style:italic}
+.vt-text.empty{color:var(--muted2)}
+.vt-text.err{color:var(--red)}
+
+.no-voice{padding:13px;font-size:.72rem;color:var(--muted2);text-align:center;line-height:1.5}
+.no-voice a{color:var(--accent);text-decoration:none}
+
+/* Utility buttons */
+.reset-mini{width:100%;padding:7px;border-radius:6px;border:1px solid var(--border);
+  background:transparent;color:var(--muted2);font-family:var(--ff-mono);
+  font-size:.62rem;letter-spacing:.1em;cursor:pointer;transition:all .2s}
+.reset-mini:hover{color:var(--muted);border-color:var(--border2)}
+.stop-btn{width:100%;padding:11px;border-radius:7px;border:1px solid var(--border2);
+  background:transparent;color:var(--muted);font-family:var(--ff-display);
+  font-size:.95rem;letter-spacing:.1em;cursor:pointer;transition:all .2s}
+.stop-btn:hover{border-color:var(--red);color:var(--red);background:rgba(255,70,70,.05)}
+
+/* ── Session ended overlay ────────────────────────────────────── */
+.ended-overlay{position:fixed;inset:0;background:rgba(7,9,14,.85);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;z-index:500}
+.ended-overlay.show{display:flex}
+.ended-card{background:var(--card);border:1px solid var(--border2);border-radius:13px;
+  padding:32px 36px;max-width:420px;width:90%;text-align:center}
+.ended-title{font-family:var(--ff-display);font-size:2.6rem;color:var(--accent);margin-bottom:5px}
+.ended-sub{font-size:.82rem;color:var(--muted);margin-bottom:22px}
+.ended-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px}
+.es-box{background:var(--surface);border-radius:7px;padding:12px 8px}
+.es-v{font-family:var(--ff-display);font-size:1.8rem;color:var(--text)}
+.es-l{font-family:var(--ff-mono);font-size:.58rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.ended-btns{display:flex;gap:9px}
+.ebtn{flex:1;padding:11px;border-radius:7px;font-family:var(--ff-display);font-size:.95rem;
+  letter-spacing:.08em;cursor:pointer;transition:all .2s;text-decoration:none;
+  display:flex;align-items:center;justify-content:center}
+.ebtn-primary{background:var(--accent);color:#000;border:none}
+.ebtn-primary:hover{background:var(--accent-d)}
+.ebtn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+.ebtn-ghost:hover{color:var(--text)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div>
+    <span class="nav-logo">SmartAssist</span>
+    <span class="nav-sub">Live Session</span>
+  </div>
+  <div class="nav-right">
+    <div class="coach-indicator" id="coachIndicator">
+      <div class="ci-dot"></div><span id="coachIndText">Speaking</span>
+    </div>
+    <div class="live-badge"><div class="live-dot" id="liveDot"></div><span id="liveText">Connecting</span></div>
+    <div class="session-timer" id="sessionTimer">00:00</div>
+  </div>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Setup</a>
+    <a href="/session" class="nav-link active">Session</a>
+    <a href="/logs" class="nav-link">History</a>
+  </div>
+</nav>
+
+<div class="workspace">
+
+  <!-- ── Video column ────────────────────────────────────────── -->
+  <div class="video-col">
+    <div class="video-frame">
+      <div class="hc hc-tl"></div><div class="hc hc-tr"></div>
+      <div class="hc hc-bl"></div><div class="hc hc-br"></div>
+      <div class="scan-line"></div>
+      <div class="no-feed" id="noFeed">
+        <div class="spinner"></div><p>Loading feed…</p>
+      </div>
+      <img id="feed" src="/video_feed" alt="Feed" style="display:none"
+           onload="onFeedLoad()" onerror="onFeedErr()"/>
+      <!-- Goal progress bar at bottom of video -->
+      <div class="goal-bar-wrap" id="goalBarWrap" style="display:none">
+        <div class="goal-bar-fill" id="goalBarFill"></div>
+      </div>
+      <div class="goal-label-overlay" id="goalLabelOverlay"></div>
+    </div>
+    <div class="ex-switcher">
+      <button class="ex-sw-btn squat-active" id="btnS" onclick="switchEx('squat')">🦵 SQUAT</button>
+      <button class="ex-sw-btn"              id="btnP" onclick="switchEx('plank')">💪 PLANK</button>
+    </div>
+  </div>
+
+  <!-- ── Side panel ─────────────────────────────────────────── -->
+  <div class="side">
+
+    <!-- SQUAT stats -->
+    <div id="panelSquat">
+      <div class="card">
+        <div class="ch">
+          <span>Reps</span>
+          <span id="goalRepBadge" style="font-size:.58rem;color:var(--muted)"></span>
+        </div>
+        <div class="cb">
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div class="big-num squat-col" id="repNum">0</div>
+            <div class="big-unit">REPS</div>
+          </div>
+          <div id="goalRepProgress" style="display:none">
+            <div class="goal-progress">
+              <div class="gp-label">
+                <span>Progress</span>
+                <span id="gpRepLabel">0 / ?</span>
+              </div>
+              <div class="gp-bar"><div class="gp-fill" id="gpRepFill"></div></div>
+            </div>
+          </div>
+          <div class="stages">
+            <div class="stage-p up-on" id="stUp">UP</div>
+            <div class="stage-p" id="stDn">DOWN</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch">Movement Details</div>
+        <div class="cb">
+          <div class="gauges">
+            <div class="g-row">
+              <span class="g-lbl">Knee Bend</span>
+              <div class="g-bar"><div class="g-fill" id="gKnee"></div></div>
+              <span class="g-val" id="gKneeV">—</span>
+            </div>
+            <div class="g-row">
+              <span class="g-lbl">Forward Lean</span>
+              <div class="g-bar"><div class="g-fill" id="gTorso"></div></div>
+              <span class="g-val" id="gTorsoV">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLANK stats -->
+    <div id="panelPlank" style="display:none">
+      <div class="card">
+        <div class="ch">
+          <span>Hold Time</span>
+          <span id="goalHoldBadge" style="font-size:.58rem;color:var(--muted)"></span>
+        </div>
+        <div class="cb">
+          <div style="display:flex;align-items:baseline;gap:6px">
+            <div class="big-num plank-col" id="holdNum">0</div>
+            <div class="big-unit">SEC</div>
+          </div>
+          <div id="goalHoldProgress" style="display:none">
+            <div class="goal-progress">
+              <div class="gp-label">
+                <span>Progress</span>
+                <span id="gpHoldLabel">0s / ?s</span>
+              </div>
+              <div class="gp-bar"><div class="gp-fill" id="gpHoldFill"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch">Body Position</div>
+        <div class="cb">
+          <div class="plank-gauge">
+            <div class="vbar-labels"><span>High</span><span>Ideal</span><span>Low</span></div>
+            <div class="vbar-wrap"><div class="vbar-fill" id="vFill" style="height:50%"></div></div>
+            <div class="plank-status">
+              <div class="ps-val" id="bodyDeg">—°</div>
+              <div class="ps-sub">Body Line</div>
+              <div class="ps-badge" id="plankBadge">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback (shared) -->
+    <div class="card">
+      <div class="ch">Form Feedback</div>
+      <div class="cb">
+        <div class="fb-list" id="fbList">
+          <div class="fb-item ok"><span class="fb-ic">💡</span><span>Step into frame to begin.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voice Coach -->
+    <div class="voice-panel" id="voicePanel">
+      <div class="ch">
+        <span>AI Voice Coach</span>
+        <div class="coach-indicator" id="speakBadge">
+          <div class="ci-dot"></div><span id="speakBadgeText">Speaking</span>
+        </div>
+      </div>
+      <div id="noVoice" class="no-voice">
+        Add a Voice Coach API key on the <a href="/">Setup page</a> to get spoken coaching during your workout.
+      </div>
+      <div id="voiceReady" style="display:none">
+        <div class="ptt-area">
+          <div class="waveform" id="waveform">
+            <div class="wv-bar"></div><div class="wv-bar"></div><div class="wv-bar"></div>
+            <div class="wv-bar"></div><div class="wv-bar"></div><div class="wv-bar"></div>
+            <div class="wv-bar"></div>
+          </div>
+          <button class="ptt-btn" id="pttBtn"
+                  onmousedown="startRecord()" onmouseup="stopRecord()"
+                  ontouchstart="startRecord(event)" ontouchend="stopRecord(event)">🎙️</button>
+          <div class="ptt-label" id="pttLabel">Hold to Talk</div>
+        </div>
+        <div class="voice-transcript" id="voiceTranscript">
+          <div class="vt-row">
+            <span class="vt-text empty">Hold the mic button and ask anything — "how am I doing?", "what should I fix?"</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="reset-mini" onclick="doReset()">↺ RESET COUNTERS</button>
+    <button class="stop-btn"  onclick="stopSession()">⏹ END SESSION</button>
+
+  </div><!-- /.side -->
+</div><!-- /.workspace -->
+
+<!-- Session ended overlay -->
+<div class="ended-overlay" id="endedOverlay">
+  <div class="ended-card">
+    <div class="ended-title">SESSION DONE</div>
+    <div class="ended-sub">Your workout has been saved to logs.</div>
+    <div class="ended-stats">
+      <div class="es-box"><div class="es-v" id="esDur">—</div><div class="es-l">Duration</div></div>
+      <div class="es-box"><div class="es-v" id="esReps">—</div><div class="es-l">Reps</div></div>
+      <div class="es-box"><div class="es-v" id="esErrors">—</div><div class="es-l">Corrections</div></div>
+    </div>
+    <div class="ended-btns">
+      <button class="ebtn ebtn-primary" onclick="window.location.href='/'">NEW SESSION</button>
+      <a class="ebtn ebtn-ghost" href="/logs">VIEW LOGS</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────────────
+let currentEx    = '{{ exercise }}';
+let pollInterval = null;
+let timerInterval= null;
+let sessionSecs  = 0;
+let lastFbKey    = '';
+let voiceReady   = false;
+
+// Goal tracking
+const goal = {{ goal | tojson }};  // injected from Flask
+let goalAchieved    = false;
+let lastRepCount    = 0;
+let lastRepTime     = Date.now();
+let lastPlankCorrect= null;     // true/false/null
+let lastPlankDrop   = 0;        // timestamp of last plank drop event
+
+// Auto-coach throttle (frontend side — prevents hammering /voice/auto_coach)
+const autoThrottle = {};
+
+// ─────────────────────────────────────────────────────────────────────
+//  FEED
+// ─────────────────────────────────────────────────────────────────────
+function onFeedLoad() {
+  document.getElementById('noFeed').style.display='none';
+  document.getElementById('feed').style.display='block';
+  document.getElementById('liveDot').classList.add('on');
+  document.getElementById('liveText').textContent='Live';
+}
+function onFeedErr(){ document.getElementById('liveText').textContent='Feed error'; }
+
+// ─────────────────────────────────────────────────────────────────────
+//  EXERCISE SWITCH
+// ─────────────────────────────────────────────────────────────────────
+function switchEx(ex) {
+  currentEx = ex;
+  document.getElementById('btnS').className='ex-sw-btn'+(ex==='squat'?' squat-active':'');
+  document.getElementById('btnP').className='ex-sw-btn'+(ex==='plank'?' plank-active':'');
+  document.getElementById('panelSquat').style.display=ex==='squat'?'':'none';
+  document.getElementById('panelPlank').style.display=ex==='plank'?'':'none';
+  fetch('/set_exercise',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({exercise:ex})});
+  clearFb();
+  goalAchieved=false;
+  updateGoalUI();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  POLLING
+// ─────────────────────────────────────────────────────────────────────
+function startPolling(){
+  pollInterval=setInterval(async()=>{
+    try{
+      const d=await(await fetch('/stats')).json();
+      if(d.exercise!==currentEx) return;
+      if(currentEx==='squat') updateSquat(d);
+      else                    updatePlank(d);
+      updateFb(d.feedback||[],d.has_error||false);
+      checkAutoCoach(d);
+    }catch(_){}
+  },240);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SQUAT UI
+// ─────────────────────────────────────────────────────────────────────
+function updateSquat(d){
+  const reps=d.reps??0;
+  const el=document.getElementById('repNum');
+  if(el.textContent!==String(reps)){
+    el.textContent=reps;
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'),220);
+    lastRepTime=Date.now();
+    lastRepCount=reps;
+  }
+  const ka=d.knee_angle??null, ta=d.torso_angle??null;
+  if(ka!==null){
+    const pct=Math.round((180-ka)/180*100), bad=ka<80;
+    document.getElementById('gKnee').style.width=pct+'%';
+    document.getElementById('gKnee').className='g-fill'+(bad?' warn':'');
+    document.getElementById('gKneeV').textContent=ka+'°';
+  }
+  if(ta!==null){
+    const pct2=Math.round(Math.min(ta,90)/90*100), bad2=ta>70;
+    document.getElementById('gTorso').style.width=pct2+'%';
+    document.getElementById('gTorso').className='g-fill'+(bad2?' warn':'');
+    document.getElementById('gTorsoV').textContent=ta+'°';
+  }
+  const st=(d.stage||'up').toLowerCase();
+  document.getElementById('stUp').className='stage-p'+(st==='up'?' up-on':'');
+  document.getElementById('stDn').className='stage-p'+(st==='down'?' down-on':'');
+
+  // Goal progress
+  if(goal.target_reps){
+    const pct=Math.min(100,Math.round(reps/goal.target_reps*100));
+    document.getElementById('gpRepFill').style.width=pct+'%';
+    document.getElementById('gpRepLabel').textContent=reps+' / '+goal.target_reps;
+    if(pct>=100) document.getElementById('gpRepFill').classList.add('done');
+    document.getElementById('goalRepProgress').style.display='';
+    document.getElementById('goalRepBadge').textContent='Goal: '+goal.target_reps+' reps';
+    updateVideoGoalBar(pct);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  PLANK UI
+// ─────────────────────────────────────────────────────────────────────
+function updatePlank(d){
+  const hold=d.hold_seconds??0, angle=d.body_angle??null, status=d.form_status||'unknown';
+  document.getElementById('holdNum').textContent=Math.round(hold);
+  if(angle!==null){
+    const ratio=Math.max(0,Math.min(1,(angle-140)/80));
+    const bad=angle<162||angle>198;
+    document.getElementById('vFill').style.height=Math.round(ratio*100)+'%';
+    document.getElementById('vFill').className='vbar-fill'+(bad?' warn':'');
+    document.getElementById('bodyDeg').textContent=angle+'°';
+    const badge=document.getElementById('plankBadge');
+    badge.textContent=status==='correct'?'CORRECT':'FIX FORM';
+    badge.className='ps-badge '+(status==='correct'?'ok':'err');
+  }
+  // Goal
+  if(goal.target_seconds){
+    const pct=Math.min(100,Math.round(hold/goal.target_seconds*100));
+    document.getElementById('gpHoldFill').style.width=pct+'%';
+    document.getElementById('gpHoldLabel').textContent=Math.round(hold)+'s / '+goal.target_seconds+'s';
+    if(pct>=100) document.getElementById('gpHoldFill').classList.add('done');
+    document.getElementById('goalHoldProgress').style.display='';
+    document.getElementById('goalHoldBadge').textContent='Goal: '+goal.target_seconds+'s';
+    updateVideoGoalBar(pct);
+  }
+  // Track plank drop (was correct → now error/unknown)
+  const isCorrect=(status==='correct');
+  if(lastPlankCorrect===true && !isCorrect){
+    lastPlankDrop=Date.now();
+  }
+  lastPlankCorrect=isCorrect;
+}
+
+function updateVideoGoalBar(pct){
+  const wrap=document.getElementById('goalBarWrap');
+  const fill=document.getElementById('goalBarFill');
+  const lbl=document.getElementById('goalLabelOverlay');
+  wrap.style.display='';
+  fill.style.width=pct+'%';
+  fill.className='goal-bar-fill'+(pct>=100?' done':pct>=70?' warn':'');
+  lbl.textContent=pct+'%';
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  FEEDBACK
+// ─────────────────────────────────────────────────────────────────────
+function updateFb(msgs,hasError){
+  const key=msgs.join('|');
+  if(key===lastFbKey) return;
+  lastFbKey=key;
+  const list=document.getElementById('fbList');
+  list.innerHTML='';
+  if(!msgs.length){
+    list.innerHTML='<div class="fb-item ok"><span class="fb-ic">👁️</span><span>Step into frame…</span></div>';
+    return;
+  }
+  msgs.forEach((m,i)=>{
+    const isErr=hasError&&i===0;
+    const el=document.createElement('div');
+    el.className='fb-item '+(isErr?'err':'ok');
+    el.innerHTML=`<span class="fb-ic">${isErr?'⚠️':'✅'}</span><span>${m}</span>`;
+    list.appendChild(el);
+  });
+}
+function clearFb(){lastFbKey='';document.getElementById('fbList').innerHTML='<div class="fb-item ok"><span class="fb-ic">💡</span><span>Loading…</span></div>';}
+
+// ─────────────────────────────────────────────────────────────────────
+//  AUTO-COACH TRIGGER DETECTION
+// ─────────────────────────────────────────────────────────────────────
+function canAutoCoach(trigger, throttleSecs){
+  const now=Date.now();
+  const last=autoThrottle[trigger]||0;
+  if(now-last < throttleSecs*1000) return false;
+  autoThrottle[trigger]=now;
+  return true;
+}
+
+async function triggerAutoCoach(trigger, details){
+  if(!voiceReady) return;
+  // Prevent calling while already speaking
+  if(window.speechSynthesis.speaking) return;
+  try{
+    const res=await fetch('/voice/auto_coach',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({trigger,details})
+    });
+    const data=await res.json();
+    if(data.skip||!data.reply) return;
+    showAutoCoachBubble(data.reply, trigger);
+    speakReply(data.reply, 'auto');
+  }catch(_){}
+}
+
+function checkAutoCoach(d){
+  if(!voiceReady||goalAchieved&&currentEx==='squat') return;
+  const now=Date.now();
+
+  if(currentEx==='squat'){
+    // 1. Form error
+    if(d.has_error && d.feedback && d.feedback.length){
+      if(canAutoCoach('form_error',6)){
+        triggerAutoCoach('form_error',{error:d.feedback[0]});
+      }
+    }
+    // 2. Goal achieved
+    const reps=d.reps||0;
+    if(goal.target_reps && reps>=goal.target_reps && !goalAchieved){
+      goalAchieved=true;
+      triggerAutoCoach('goal_achieved',{reps,target:goal.target_reps});
+    }
+    // 3. Struggling — no new rep in 30s AND had >0 reps
+    if(lastRepCount>0 && (now-lastRepTime)>30000){
+      if(canAutoCoach('struggling',20)){
+        triggerAutoCoach('struggling',{reps:lastRepCount,paused_sec:Math.round((now-lastRepTime)/1000)});
+      }
+    }
+  }
+  else if(currentEx==='plank'){
+    // 1. Form error
+    if(d.has_error && d.feedback && d.feedback.length){
+      if(canAutoCoach('form_error',6)){
+        triggerAutoCoach('form_error',{error:d.feedback[0]});
+      }
+    }
+    // 2. Goal achieved
+    const hold=d.hold_seconds||0;
+    if(goal.target_seconds && hold>=goal.target_seconds && !goalAchieved){
+      goalAchieved=true;
+      triggerAutoCoach('goal_achieved',{hold_seconds:hold,target:goal.target_seconds});
+    }
+    // 3. Plank dropped (was correct, now error) — struggling
+    if(lastPlankDrop>0 && (now-lastPlankDrop)<2000){
+      if(canAutoCoach('struggling',20)){
+        triggerAutoCoach('struggling',{reason:'dropped_plank',hold_before:Math.round(hold)});
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  GOAL UI INIT
+// ─────────────────────────────────────────────────────────────────────
+function updateGoalUI(){
+  if(goal.target_reps && currentEx==='squat'){
+    document.getElementById('goalRepProgress').style.display='';
+    document.getElementById('goalRepBadge').textContent='Goal: '+goal.target_reps+' reps';
+    document.getElementById('goalBarWrap').style.display='';
+  }
+  if(goal.target_seconds && currentEx==='plank'){
+    document.getElementById('goalHoldProgress').style.display='';
+    document.getElementById('goalHoldBadge').textContent='Goal: '+goal.target_seconds+'s';
+    document.getElementById('goalBarWrap').style.display='';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SESSION TIMER
+// ─────────────────────────────────────────────────────────────────────
+function startTimer(){
+  timerInterval=setInterval(()=>{
+    sessionSecs++;
+    const m=String(Math.floor(sessionSecs/60)).padStart(2,'0');
+    const s=String(sessionSecs%60).padStart(2,'0');
+    document.getElementById('sessionTimer').textContent=m+':'+s;
+  },1000);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  CONTROLS
+// ─────────────────────────────────────────────────────────────────────
+function doReset(){
+  fetch('/reset',{method:'POST'});
+  clearFb();
+  goalAchieved=false;
+  lastRepCount=0;
+  lastRepTime=Date.now();
+}
+async function stopSession(){
+  clearInterval(pollInterval); clearInterval(timerInterval);
+  window.speechSynthesis.cancel();
+  const res=await fetch('/stop_session',{method:'POST'});
+  const data=await res.json();
+  const s=data.session||{};
+  document.getElementById('esDur').textContent=fmtDur(s.duration_sec||0);
+  document.getElementById('esReps').textContent=s.reps||0;
+  document.getElementById('esErrors').textContent=s.errors_total||0;
+  document.getElementById('endedOverlay').classList.add('show');
+}
+function fmtDur(sec){ const m=Math.floor(sec/60),s=Math.round(sec%60); return m>0?m+'m '+s+'s':s+'s'; }
+
+// ─────────────────────────────────────────────────────────────────────
+//  VOICE — PTT
+// ─────────────────────────────────────────────────────────────────────
+let mediaRecorder=null, audioChunks=[], isRecording=false, micStream=null;
+
+async function initVoice(){
+  try{
+    const h=await(await fetch('/health')).json();
+    if(h.voice_ready){ enableVoiceUI(); }
+  }catch(_){}
+}
+function enableVoiceUI(){
+  voiceReady=true;
+  document.getElementById('noVoice').style.display='none';
+  document.getElementById('voiceReady').style.display='block';
+  document.getElementById('voicePanel').classList.add('active-coach');
+}
+
+async function startRecord(e){
+  if(e) e.preventDefault();
+  if(isRecording||!voiceReady) return;
+  window.speechSynthesis.cancel();
+  hideSpeakBadge();
+  try{
+    micStream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+  }catch{ showVoiceErr('Microphone access denied'); return; }
+  audioChunks=[];
+  const mime=MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':
+             MediaRecorder.isTypeSupported('audio/ogg')  ?'audio/ogg':'audio/mp4';
+  mediaRecorder=new MediaRecorder(micStream,{mimeType:mime});
+  mediaRecorder.ondataavailable=e=>{ if(e.data.size>0) audioChunks.push(e.data); };
+  mediaRecorder.onstop=sendAudio;
+  mediaRecorder.start(100);
+  isRecording=true;
+  document.getElementById('pttBtn').classList.add('recording');
+  document.getElementById('pttLabel').textContent='Recording…';
+  document.getElementById('pttLabel').className='ptt-label rec-label';
+  document.getElementById('waveform').classList.add('show');
+}
+
+function stopRecord(e){
+  if(e) e.preventDefault();
+  if(!isRecording||!mediaRecorder) return;
+  isRecording=false;
+  mediaRecorder.stop();
+  micStream?.getTracks().forEach(t=>t.stop());
+  document.getElementById('pttBtn').classList.remove('recording');
+  document.getElementById('pttBtn').classList.add('processing');
+  document.getElementById('pttBtn').textContent='⏳';
+  document.getElementById('pttLabel').textContent='Processing…';
+  document.getElementById('pttLabel').className='ptt-label proc-label';
+  document.getElementById('waveform').classList.remove('show');
+}
+
+async function sendAudio(){
+  if(!audioChunks.length){ resetPTT(); return; }
+  const mime=mediaRecorder?.mimeType||'audio/webm';
+  const ext=mime.includes('ogg')?'ogg':mime.includes('mp4')?'mp4':'webm';
+  const blob=new Blob(audioChunks,{type:mime});
+  const fd=new FormData();
+  fd.append('audio',blob,'recording.'+ext);
+  fd.append('exercise',currentEx);
+  try{
+    const res=await fetch('/voice/chat',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok||data.error){ showVoiceErr(data.error||'Error'); }
+    else{ showVoiceExchange(data.transcript,data.reply); speakReply(data.reply,'ptt'); }
+  }catch{ showVoiceErr('Network error'); }
+  resetPTT();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  VOICE — TTS + UI
+// ─────────────────────────────────────────────────────────────────────
+function speakReply(text, source='ptt'){
+  if(!window.speechSynthesis||!text) return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  const voices=window.speechSynthesis.getVoices();
+  const pref=voices.find(v=>v.lang.startsWith('en')&&(v.name.includes('Google')||v.name.includes('Natural')||v.name.includes('Samantha')))
+             ||voices.find(v=>v.lang.startsWith('en'));
+  if(pref) utt.voice=pref;
+  utt.rate=1.05; utt.pitch=1.0; utt.volume=1.0;
+  utt.onstart=()=>showSpeakBadge(source==='auto'?'Coach speaking':'Speaking');
+  utt.onend=()=>hideSpeakBadge();
+  utt.onerror=()=>hideSpeakBadge();
+  window.speechSynthesis.speak(utt);
+}
+
+function showSpeakBadge(label){
+  const b=document.getElementById('speakBadge');
+  b.className='coach-indicator show '+(label.includes('Coach')?'auto':'speaking');
+  document.getElementById('speakBadgeText').textContent=label;
+}
+function hideSpeakBadge(){
+  document.getElementById('speakBadge').classList.remove('show');
+}
+
+function showVoiceExchange(you,coach){
+  document.getElementById('voiceTranscript').innerHTML=`
+    <div class="vt-row"><span class="vt-who">You</span><span class="vt-text you">${esc(you)}</span></div>
+    <div class="vt-row"><span class="vt-who">Coach</span><span class="vt-text coach">${esc(coach)}</span></div>`;
+}
+
+function showAutoCoachBubble(reply, trigger){
+  if(!voiceReady) return;
+  const icon = trigger==='goal_achieved'?'🏆':trigger==='struggling'?'💪':'🎯';
+  document.getElementById('voiceTranscript').innerHTML=`
+    <div class="vt-row">
+      <span class="vt-who">${icon} Auto Coach</span>
+      <span class="vt-text coach">${esc(reply)}</span>
+    </div>`;
+}
+
+function showVoiceErr(msg){
+  document.getElementById('voiceTranscript').innerHTML=
+    `<div class="vt-row"><span class="vt-text err">${esc(msg)}</span></div>`;
+}
+
+function resetPTT(){
+  document.getElementById('pttBtn').classList.remove('processing','recording');
+  document.getElementById('pttBtn').textContent='🎙️';
+  document.getElementById('pttLabel').textContent='Hold to Talk';
+  document.getElementById('pttLabel').className='ptt-label';
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─────────────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────────────
+(function(){
+  // Set exercise panels
+  const ex='{{ exercise }}';
+  if(ex==='plank'){
+    document.getElementById('btnS').className='ex-sw-btn';
+    document.getElementById('btnP').className='ex-sw-btn plank-active';
+    document.getElementById('panelSquat').style.display='none';
+    document.getElementById('panelPlank').style.display='';
+    currentEx='plank';
+  }
+
+  // Init goal UI
+  updateGoalUI();
+
+  startPolling();
+  startTimer();
+  initVoice();
+
+  // Pre-load TTS voices (Chrome lazy-loads them)
+  if(window.speechSynthesis){
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
+  }
+})();
+</script>
+</body>
+</html>

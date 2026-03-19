@@ -1,0 +1,52 @@
+/* ── ExForm shared base CSS ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #07090e;
+  --surface:   #0c1018;
+  --card:      #111520;
+  --card2:     #161c29;
+  --border:    #1c2535;
+  --border2:   #253045;
+  --accent:    #00e5a0;
+  --accent-d:  #00b87d;
+  --blue:      #3ba7ff;
+  --orange:    #ff8c42;
+  --red:       #ff4646;
+  --purple:    #9d6cff;
+  --text:      #dde4f0;
+  --muted:     #4a5a72;
+  --muted2:    #2e3d52;
+  --squat:     #3ba7ff;
+  --plank:     #9d6cff;
+
+  --ff-display: 'Bebas Neue', sans-serif;
+  --ff-mono:    'DM Mono', monospace;
+  --ff-body:    'DM Sans', sans-serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-body);
+  overflow-x: hidden;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.35;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }

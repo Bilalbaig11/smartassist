@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SmartAssist — AI Exercise Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--surface:#0c1018;--card:#111520;--card2:#161c29;
+  --border:#1c2535;--border2:#253045;
+  --accent:#00e5a0;--accent-d:#00b87d;
+  --blue:#3ba7ff;--orange:#ff8c42;--red:#ff4646;--purple:#9d6cff;
+  --text:#dde4f0;--muted:#4a5a72;--muted2:#2e3d52;
+  --squat:#3ba7ff;--plank:#9d6cff;
+  --ff-display:'Bebas Neue',sans-serif;
+  --ff-mono:'DM Mono',monospace;
+  --ff-body:'DM Sans',sans-serif;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ff-body)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:.4}
+
+nav{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;
+  border-bottom:1px solid var(--border);background:rgba(7,9,14,.9);backdrop-filter:blur(16px);
+  position:sticky;top:0;z-index:100}
+.nav-logo{font-family:var(--ff-display);font-size:1.7rem;letter-spacing:.05em;color:var(--accent)}
+.nav-sub{font-family:var(--ff-mono);font-size:.6rem;letter-spacing:.15em;
+  color:var(--muted);text-transform:uppercase;margin-left:10px;vertical-align:middle}
+.nav-links{display:flex;gap:6px}
+.nav-link{padding:6px 14px;border-radius:6px;font-size:.8rem;font-weight:500;
+  text-decoration:none;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;transition:all .2s}
+.nav-link:hover{color:var(--text);background:var(--card2)}
+.nav-link.active{color:var(--accent);background:rgba(0,229,160,.08)}
+
+.hero{padding:50px 2rem 0;max-width:960px;margin:0 auto;
+  display:grid;grid-template-columns:1fr auto;align-items:end;gap:2rem}
+.hero-eyebrow{font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.hero-title{font-family:var(--ff-display);font-size:clamp(3rem,7vw,5rem);
+  line-height:.95;color:var(--text)}
+.hero-title span{color:var(--accent)}
+.hero-sub{margin-top:12px;font-size:.88rem;color:var(--muted);line-height:1.6;max-width:460px}
+.hero-badge{font-family:var(--ff-mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);border:1px solid var(--border2);border-radius:8px;padding:8px 14px;white-space:nowrap}
+
+/* ── Section container ─────────────────────────────────────────── */
+.setup-wrap{max-width:960px;margin:36px auto 0;padding:0 2rem}
+.section-label{font-family:var(--ff-mono);font-size:.65rem;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Grid sections ────────────────────────────────────────────── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px}
+
+/* ── Exercise cards ────────────────────────────────────────────── */
+.ex-card{position:relative;padding:20px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);cursor:pointer;transition:all .22s;overflow:hidden}
+.ex-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.ex-card.selected-squat{border-color:var(--squat);
+  background:linear-gradient(135deg,rgba(59,167,255,.1),var(--card));
+  box-shadow:0 0 28px rgba(59,167,255,.1)}
+.ex-card.selected-plank{border-color:var(--plank);
+  background:linear-gradient(135deg,rgba(157,108,255,.1),var(--card));
+  box-shadow:0 0 28px rgba(157,108,255,.1)}
+.ex-card-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.ex-icon{font-size:1.5rem}
+.ex-name{font-family:var(--ff-display);font-size:1.5rem;letter-spacing:.04em}
+.ex-card.selected-squat .ex-name{color:var(--squat)}
+.ex-card.selected-plank .ex-name{color:var(--plank)}
+.ex-desc{font-size:.78rem;color:var(--muted);line-height:1.5}
+.ex-badges{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.badge{font-family:var(--ff-mono);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 7px;border-radius:4px;background:var(--card2);border:1px solid var(--border2);color:var(--muted)}
+.ex-radio{position:absolute;top:14px;right:14px;width:16px;height:16px;border-radius:50%;
+  border:2px solid var(--border2);background:var(--surface);transition:all .2s;
+  display:flex;align-items:center;justify-content:center}
+.ex-card.selected-squat .ex-radio{border-color:var(--squat);background:rgba(59,167,255,.15)}
+.ex-card.selected-plank .ex-radio{border-color:var(--plank);background:rgba(157,108,255,.15)}
+.ex-radio::after{content:'';width:7px;height:7px;border-radius:50%;transition:background .2s}
+.ex-card.selected-squat .ex-radio::after{background:var(--squat)}
+.ex-card.selected-plank .ex-radio::after{background:var(--plank)}
+
+/* ── Source picker ─────────────────────────────────────────────── */
+.src-tabs{display:flex;gap:5px;padding:3px;background:var(--surface);
+  border-radius:9px;border:1px solid var(--border);margin-bottom:12px}
+.src-tab{flex:1;padding:8px;text-align:center;border-radius:6px;cursor:pointer;
+  font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);transition:all .2s;border:none;background:transparent}
+.src-tab:hover{color:var(--text)}
+.src-tab.active{background:var(--card2);color:var(--text);border:1px solid var(--border2)}
+
+.webcam-card{padding:22px;border-radius:9px;border:1px solid var(--border);
+  background:var(--card);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;min-height:120px;text-align:center}
+.webcam-card .cam-icon{font-size:2rem}
+.webcam-card p{font-size:.78rem;color:var(--muted);line-height:1.5}
+
+.drop-zone{padding:26px 20px;border-radius:9px;border:2px dashed var(--border2);
+  background:var(--card);display:flex;flex-direction:column;align-items:center;
+  gap:9px;cursor:pointer;transition:all .25s;text-align:center;min-height:120px;justify-content:center}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(0,229,160,.04)}
+.drop-zone .dz-icon{font-size:1.8rem;opacity:.5}
+.drop-zone p{font-size:.78rem;color:var(--muted)}
+.drop-zone strong{color:var(--text);font-weight:500}
+.drop-zone small{font-family:var(--ff-mono);font-size:.62rem;color:var(--muted2)}
+#fileInput{display:none}
+
+.file-selected{display:none;flex-direction:column;align-items:center;gap:7px;
+  padding:18px;border-radius:9px;border:1px solid var(--accent-d);background:rgba(0,229,160,.06);text-align:center}
+.file-selected.visible{display:flex}
+.file-selected .fs-name{font-family:var(--ff-mono);font-size:.76rem;color:var(--accent);word-break:break-all}
+.file-selected .fs-clear{font-size:.7rem;color:var(--muted);cursor:pointer;text-decoration:underline}
+
+.upload-bar{display:none;height:3px;border-radius:2px;background:var(--border);overflow:hidden;width:100%;margin-top:4px}
+.upload-bar.visible{display:block}
+.upload-bar-fill{height:100%;background:var(--accent);width:0%;transition:width .2s}
+
+/* ── Goal card ─────────────────────────────────────────────────── */
+.goal-card{padding:18px;border-radius:10px;border:1px solid var(--border);background:var(--card)}
+.goal-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.goal-input-wrap{display:flex;flex-direction:column;gap:5px}
+.goal-label{font-family:var(--ff-mono);font-size:.6rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted)}
+.goal-input{padding:9px 12px;border-radius:7px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-family:var(--ff-mono);font-size:.85rem;
+  outline:none;transition:border-color .2s;width:100%}
+.goal-input:focus{border-color:var(--accent)}
+.goal-input:disabled{opacity:.4;cursor:not-allowed}
+.goal-preview{margin-top:10px;font-size:.78rem;color:var(--accent);
+  font-family:var(--ff-mono);min-height:18px}
+
+/* ── API key card ─────────────────────────────────────────────── */
+.key-card{padding:18px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);display:flex;flex-direction:column;gap:10px}
+.key-from-env{display:flex;align-items:center;gap:8px;padding:10px 14px;
+  border-radius:7px;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);
+  font-size:.8rem;color:var(--accent)}
+.key-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.key-input{padding:10px 40px 10px 12px;border-radius:7px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-family:var(--ff-mono);
+  font-size:.8rem;outline:none;transition:border-color .2s;width:100%;position:relative}
+.key-input:focus{border-color:var(--accent)}
+.key-wrap{position:relative;flex:1}
+.key-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;
+  opacity:.4;font-size:.9rem;transition:opacity .2s}
+.key-eye:hover{opacity:.8}
+.key-status{font-family:var(--ff-mono);font-size:.68rem;color:var(--muted);white-space:nowrap}
+.key-hint{font-size:.72rem;color:var(--muted2);line-height:1.5}
+.key-hint a{color:var(--accent);text-decoration:none}
+
+/* ── Start button ─────────────────────────────────────────────── */
+.start-wrap{max-width:960px;margin:20px auto 60px;padding:0 2rem}
+.start-btn{width:100%;padding:17px;border-radius:12px;border:none;
+  background:var(--accent);color:#000;font-family:var(--ff-display);
+  font-size:1.55rem;letter-spacing:.08em;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:12px}
+.start-btn:hover{background:var(--accent-d);transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,229,160,.22)}
+.start-btn:active{transform:translateY(0)}
+.start-btn:disabled{background:var(--muted2);color:var(--muted);cursor:not-allowed;transform:none;box-shadow:none}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:rgba(255,70,70,.14);border:1px solid var(--red);color:#ff9a9a;
+  padding:11px 18px;border-radius:8px;font-size:.8rem;transition:transform .3s;z-index:1000}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div>
+    <span class="nav-logo">SmartAssist</span>
+    <span class="nav-sub">AI Exercise Coach</span>
+  </div>
+  <div class="nav-links">
+    <a href="/" class="nav-link active">Setup</a>
+    <a href="/session" class="nav-link">Session</a>
+    <a href="/logs" class="nav-link">History</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div>
+    <div class="hero-eyebrow">▸ Real-Time Pose Analysis + AI Voice Coaching</div>
+    <h1 class="hero-title">TRAIN<br/><span>SMARTER.</span></h1>
+    <p class="hero-sub">SmartAssist watches your form in real time, counts your reps, and gives you spoken coaching — like having a personal trainer watching every move.</p>
+    <p style="margin-top:10px;font-family:var(--ff-mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)">
+      by Bilal Baig
+    </p>
+  </div>
+  <div class="hero-badge" style="text-align:center;line-height:1.7">
+    🏋️ Squat · Plank<br/>
+    🎙️ Voice Coach<br/>
+    📊 Progress Tracking
+  </div>
+</div>
+
+<div class="setup-wrap">
+
+  <!-- Step 1: Exercise -->
+  <div class="section-label">01 &nbsp; Choose Exercise</div>
+  <div class="grid-2" style="margin-bottom:20px">
+    <div class="ex-card selected-squat" id="cardSquat" onclick="selectEx('squat')">
+      <div class="ex-radio"></div>
+      <div class="ex-card-header"><span class="ex-icon">🦵</span><span class="ex-name">SQUAT</span></div>
+      <p class="ex-desc">Automatic rep counting with real-time form guidance. SmartAssist watches your depth, knees, and posture every rep.</p>
+      <div class="ex-badges">
+        <span class="badge">Rep Counter</span><span class="badge">Depth Check</span><span class="badge">Live Coaching</span>
+      </div>
+    </div>
+    <div class="ex-card" id="cardPlank" onclick="selectEx('plank')">
+      <div class="ex-radio"></div>
+      <div class="ex-card-header"><span class="ex-icon">💪</span><span class="ex-name">PLANK</span></div>
+      <p class="ex-desc">Precision hold timer that only counts when your form is correct. Get spoken alerts if your hips sag or your back arches.</p>
+      <div class="ex-badges">
+        <span class="badge">Hold Timer</span><span class="badge">Alignment</span><span class="badge">Live Coaching</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 + 3: Source & Goal side by side -->
+  <div class="grid-2" style="margin-bottom:20px">
+
+    <!-- Source -->
+    <div>
+      <div class="section-label">02 &nbsp; Choose Source</div>
+      <div class="src-tabs">
+        <button class="src-tab active" id="tabWebcam" onclick="selectSrc('webcam')">📷 Webcam</button>
+        <button class="src-tab"        id="tabVideo"  onclick="selectSrc('video')">🎬 MP4 Video</button>
+      </div>
+      <div id="panelWebcam">
+        <div class="webcam-card">
+          <span class="cam-icon">📸</span>
+          <p>Your integrated or USB webcam will be used.<br/>Make sure nothing else is using the camera.</p>
+        </div>
+      </div>
+      <div id="panelVideo" style="display:none;flex-direction:column;gap:8px">
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+             ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)">
+          <span class="dz-icon">📁</span>
+          <p><strong>Drop your video here</strong><br/>or click to browse</p>
+          <small>MP4 · MOV · AVI · up to 500 MB</small>
+        </div>
+        <div class="file-selected" id="fileSelected">
+          <span style="font-size:1.2rem">✅</span>
+          <span class="fs-name" id="fsName"></span>
+          <span class="fs-clear" onclick="clearFile()">✕ Remove</span>
+        </div>
+        <div class="upload-bar" id="uploadBar"><div class="upload-bar-fill" id="uploadBarFill"></div></div>
+      </div>
+      <input type="file" id="fileInput" accept="video/*" onchange="onFileChosen(event)"/>
+    </div>
+
+    <!-- Goal -->
+    <div>
+      <div class="section-label">03 &nbsp; Set a Goal <span style="font-size:.75em;font-family:var(--ff-body);text-transform:none;letter-spacing:0;color:var(--muted2)">(optional)</span></div>
+      <div class="goal-card">
+        <p style="font-size:.78rem;color:var(--muted);line-height:1.5">
+          Set a target and SmartAssist will celebrate when you hit it — and keep you going if you're struggling.
+        </p>
+        <div class="goal-row">
+          <div class="goal-input-wrap">
+            <label class="goal-label" for="goalReps">Target Reps (Squat)</label>
+            <input class="goal-input" type="number" id="goalReps" min="1" max="200"
+                   placeholder="e.g. 10" oninput="updateGoalPreview()"/>
+          </div>
+          <div class="goal-input-wrap">
+            <label class="goal-label" for="goalSeconds">Target Hold (Plank, sec)</label>
+            <input class="goal-input" type="number" id="goalSeconds" min="5" max="600"
+                   placeholder="e.g. 60" oninput="updateGoalPreview()"/>
+          </div>
+        </div>
+        <div class="goal-preview" id="goalPreview"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Step 4: Groq API Key -->
+  <div class="section-label">04 &nbsp; Voice Coach <span style="font-size:.75em;font-family:var(--ff-body);text-transform:none;letter-spacing:0;color:var(--muted2)">(optional — adds AI voice guidance)</span></div>
+  <div class="key-card" style="margin-bottom:28px">
+    {% if voice_from_env %}
+    <div class="key-from-env">
+      ✓ &nbsp; Voice coaching is ready — API key loaded from configuration.
+    </div>
+    {% else %}
+    <div class="key-row">
+      <div class="key-wrap">
+        <input type="password" id="groqKey" class="key-input"
+               placeholder="Paste your Groq API key here…"
+               oninput="onKeyInput()"
+               onfocus="this.style.borderColor='var(--accent)'"
+               onblur="this.style.borderColor='var(--border)'"/>
+        <span class="key-eye" onclick="toggleKeyVis()">👁</span>
+      </div>
+      <div class="key-status" id="keyStatus">No key — voice disabled</div>
+    </div>
+    <p class="key-hint">
+      Get a free key at <a href="https://console.groq.com" target="_blank">console.groq.com</a>.
+      Without a key, all visual coaching still works — only spoken feedback is disabled.
+    </p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Start -->
+<div class="start-wrap">
+  <button class="start-btn" id="startBtn" onclick="startSession()">
+    ▶ &nbsp; START SESSION
+  </button>
+</div>
+
+<footer style="text-align:center;padding:10px 0 36px;font-family:var(--ff-mono);font-size:.62rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)">
+  SmartAssist &nbsp;·&nbsp; AI Exercise Coach &nbsp;·&nbsp; Built by Bilal Baig
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let selectedEx  = 'squat';
+let selectedSrc = 'webcam';
+let uploadedFn  = '';
+const voiceFromEnv = {{ 'true' if voice_from_env else 'false' }};
+
+// ── Exercise ────────────────────────────────────────────────────────
+function selectEx(ex) {
+  selectedEx = ex;
+  document.getElementById('cardSquat').className = 'ex-card' + (ex==='squat' ? ' selected-squat' : '');
+  document.getElementById('cardPlank').className = 'ex-card' + (ex==='plank' ? ' selected-plank' : '');
+  // Update which goal field is "primary"
+  document.getElementById('goalReps').disabled    = ex !== 'squat';
+  document.getElementById('goalSeconds').disabled = ex !== 'plank';
+  updateGoalPreview();
+}
+
+// ── Source ──────────────────────────────────────────────────────────
+function selectSrc(src) {
+  selectedSrc = src;
+  document.getElementById('tabWebcam').className = 'src-tab' + (src==='webcam'?' active':'');
+  document.getElementById('tabVideo').className  = 'src-tab' + (src==='video' ?' active':'');
+  document.getElementById('panelWebcam').style.display = src==='webcam' ? '' : 'none';
+  document.getElementById('panelVideo').style.display  = src==='video'  ? 'flex' : 'none';
+}
+
+// ── File upload ─────────────────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('dropZone').classList.add('drag-over'); }
+function onDragLeave()  { document.getElementById('dropZone').classList.remove('drag-over'); }
+function onDrop(e)      { e.preventDefault(); onDragLeave(); const f=e.dataTransfer.files[0]; if(f) uploadFile(f); }
+function onFileChosen(e){ const f=e.target.files[0]; if(f) uploadFile(f); }
+function clearFile()    {
+  uploadedFn='';
+  document.getElementById('fileSelected').classList.remove('visible');
+  document.getElementById('dropZone').style.display='';
+  document.getElementById('uploadBar').classList.remove('visible');
+  document.getElementById('startBtn').disabled=false;
+}
+
+function uploadFile(file) {
+  const bar=document.getElementById('uploadBar'), fill=document.getElementById('uploadBarFill');
+  bar.classList.add('visible'); fill.style.width='10%';
+  document.getElementById('startBtn').disabled=true;
+  const fd=new FormData(); fd.append('file',file);
+  const xhr=new XMLHttpRequest();
+  xhr.upload.onprogress=e=>{ if(e.lengthComputable) fill.style.width=Math.round(e.loaded/e.total*90)+'%'; };
+  xhr.onload=()=>{
+    fill.style.width='100%';
+    if(xhr.status===200){
+      const r=JSON.parse(xhr.responseText);
+      uploadedFn=r.filename;
+      document.getElementById('dropZone').style.display='none';
+      document.getElementById('fsName').textContent=file.name;
+      document.getElementById('fileSelected').classList.add('visible');
+      document.getElementById('startBtn').disabled=false;
+    } else { showToast('Upload failed'); }
+    setTimeout(()=>bar.classList.remove('visible'),600);
+  };
+  xhr.onerror=()=>showToast('Upload error');
+  xhr.open('POST','/upload_video'); xhr.send(fd);
+}
+
+// ── Goal ────────────────────────────────────────────────────────────
+function updateGoalPreview() {
+  const reps = parseInt(document.getElementById('goalReps').value)||0;
+  const secs = parseInt(document.getElementById('goalSeconds').value)||0;
+  const p    = document.getElementById('goalPreview');
+  if(selectedEx==='squat' && reps>0)
+    p.textContent = `Goal: ${reps} squat${reps===1?'':'s'}`;
+  else if(selectedEx==='plank' && secs>0)
+    p.textContent = `Goal: hold for ${secs}s`;
+  else
+    p.textContent = '';
+}
+
+// ── API key ─────────────────────────────────────────────────────────
+function onKeyInput() {
+  const v=document.getElementById('groqKey').value.trim();
+  const s=document.getElementById('keyStatus');
+  if(v.startsWith('gsk_')&&v.length>20){ s.textContent='✓ Key looks valid'; s.style.color='var(--accent)'; }
+  else if(v.length>0){ s.textContent='Format: gsk_...'; s.style.color='var(--orange)'; }
+  else{ s.textContent='No key — voice disabled'; s.style.color='var(--muted)'; }
+}
+function toggleKeyVis(){
+  const i=document.getElementById('groqKey'); i.type=i.type==='password'?'text':'password';
+}
+
+// ── Start ────────────────────────────────────────────────────────────
+async function startSession() {
+  if(selectedSrc==='video'&&!uploadedFn){ showToast('Please upload a video file first'); return; }
+
+  const apiKey = voiceFromEnv ? '' : (document.getElementById('groqKey')?.value||'').trim();
+  const reps   = parseInt(document.getElementById('goalReps').value)||0;
+  const secs   = parseFloat(document.getElementById('goalSeconds').value)||0;
+
+  const goal = {};
+  if(selectedEx==='squat' && reps>0)   goal.target_reps    = reps;
+  if(selectedEx==='plank' && secs>0)   goal.target_seconds = secs;
+
+  const res = await fetch('/start_session', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      exercise:     selectedEx,
+      source:       selectedSrc,
+      source_name:  uploadedFn,
+      groq_api_key: apiKey,
+      goal:         Object.keys(goal).length ? goal : undefined,
+    }),
+  });
+  if(res.ok){ window.location.href='/session'; }
+  else { showToast('Failed to start session'); }
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+selectEx('squat');
+selectSrc('webcam');
+</script>
+</body>
+</html>
