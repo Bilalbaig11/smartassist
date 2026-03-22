@@ -43,7 +43,7 @@ SmartAssist watches your form in real time, counts your reps, and gives you spok
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/Bilalbaig11/smartassist.git
+git clone https://github.com/your-username/smartassist.git
 cd smartassist
 
 # 2. Create and activate a virtual environment
@@ -90,30 +90,39 @@ Without a key, all visual coaching (rep counting, form feedback, history) still 
 
 ```
 smartassist/
-├── app.py                    ← Flask server · video streaming · all API routes
-├── plank_calibrate.py        ← Optional: calibrate plank thresholds to your camera
+├── app.py                        ← Flask server · video streaming · all API routes
+├── plank_calibrate.py            ← Legacy single-pose plank calibration (CLI)
 ├── requirements.txt
-├── .env.example              ← Copy to .env and add your Groq key
+├── .env.example                  ← Copy to .env and add your Groq key
 │
 ├── exercises/
-│   ├── squat.py              ← Rep counting + form analysis
-│   └── plank.py              ← Hold timer + alignment checks
+│   ├── squat.py                  ← Rep counting + form analysis
+│   └── plank.py                  ← Hold timer + alignment checks
 │
 ├── utils/
-│   ├── pose_utils.py         ← Angle calculations, landmark helpers
-│   ├── session_logger.py     ← Per-session JSON logging
-│   └── voice_coach.py        ← Groq transcription + LLM coaching responses
+│   ├── pose_utils.py             ← Angle calculations, landmark helpers
+│   ├── session_logger.py         ← Per-session JSON logging
+│   └── voice_coach.py            ← Groq transcription + LLM coaching responses
+│
+├── calibration/                  ← ML calibration tool (port 5001)
+│   ├── cali_app.py               ← Flask routes + in-memory state
+│   ├── pose_engine.py            ← MediaPipe wrapper (mirrors main app)
+│   ├── features.py               ← Feature extraction + label definitions
+│   ├── trainer.py                ← SVM, threshold sweep, plots, code snippet
+│   ├── evaluator.py              ← Test-set evaluation + comparison plots
+│   └── templates/
+│       └── index.html            ← Full single-file frontend (~900 lines)
 │
 ├── templates/
-│   ├── home.html             ← Setup page (exercise, source, goal, API key)
-│   ├── session.html          ← Live workout page
-│   └── logs.html             ← Workout history with detail drawer
+│   ├── home.html                 ← Setup page (exercise, source, goal, API key)
+│   ├── session.html              ← Live workout page
+│   └── logs.html                 ← Workout history with detail drawer
 │
 ├── static/
-│   └── base.css              ← Shared design tokens
+│   └── base.css                  ← Shared design tokens
 │
-├── uploads/                  ← Uploaded video files (git-ignored)
-└── logs/                     ← Saved session JSON files (git-ignored)
+├── uploads/                      ← Uploaded video files (git-ignored)
+└── logs/                         ← Saved session JSON files (git-ignored)
 ```
 
 ---
@@ -167,17 +176,66 @@ MediaPipe Pose Landmarker
 
 ---
 
-## 🎛️ Plank Calibration *(optional)*
+## 🧪 Calibration Tool *(optional but recommended)*
 
-The default plank thresholds work for most setups. If your camera angle is unusual, run the calibration tool for personalised values:
+SmartAssist ships with a fully separate ML-powered calibration app that learns **your** personal form thresholds — because the right knee angle or body alignment varies with your body type, camera distance, and camera angle.
 
 ```bash
-python plank_calibrate.py
+python calibration/cali_app.py
+# → http://localhost:5001
 ```
 
-> **Camera placement matters:** position your camera to the **side** of your body at waist height for best results. Front-facing cameras produce unreliable body-angle readings.
+> Runs independently on port **5001** — the main app on port 5000 can stay running.
 
-Follow the on-screen prompts to record three poses (correct plank, hips sagging, hips piked). The tool outputs values you can paste directly into `exercises/plank.py`.
+### What it calibrates
+
+| Exercise | What gets calibrated | Original hardcoded value |
+|---|---|---|
+| Squat | Knee inward ratio (`knee_hip_ratio`) | `< 0.80` |
+| Squat | Knee outward ratio *(new check, not in original)* | — |
+| Plank | Body angle min — hips sagging | `162°` |
+| Plank | Body angle max — hips piking | `198°` |
+
+### How it works
+
+1. **Collect** — upload a video, drag-drop images, or record from your webcam. Frames where MediaPipe loses your pose are automatically discarded.
+2. **Label** — click frames (or use keyboard `1`/`2`/`3`) to mark them as *correct*, *knees caving*, *hips sagging*, etc. Focus mode lets you step through frames full-screen with `←` / `→`.
+3. **Train** — fits an SVM classifier + runs a 1-D threshold sweep on your labeled data. Shows cross-validation accuracy, confusion matrix, and scatter plots.
+4. **Compare** — evaluates both the original hardcoded thresholds and your trained thresholds against a held-out test set, side-by-side with precision/recall/F1.
+5. **Paste** — the tool outputs a ready-to-paste Python snippet. Copy it into `exercises/squat.py` or `exercises/plank.py`.
+
+### Extra dependencies
+
+```bash
+pip install pandas scikit-learn matplotlib
+```
+
+### Calibration pipeline
+
+```
+Your video / images
+        │
+        ▼
+  MediaPipe (same model + settings as live app)
+  → discard no-pose frames automatically
+        │
+        ▼
+  Label frames  (correct / error classes)
+        │
+  ┌─────┴──────┐
+TRAIN set   TEST set
+        │
+        ▼
+  SVM cross-val  +  1-D threshold sweep
+        │
+        ▼
+  Python snippet  →  paste into exercises/
+        │
+        ▼
+  Compare: original vs trained thresholds on TEST set
+```
+
+> Calibration covers the two most geometry-sensitive checks (knee alignment, body angle). Depth, torso lean, and asymmetry remain hardcoded as they are less affected by individual variation.
 
 ---
 
