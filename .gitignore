@@ -11,6 +11,8 @@ dist/
 build/
 *.egg
 
+calibration/seed_demo.py
+
 # ── Virtual environments ───────────────────────────────────────────────
 venv/
 .venv/

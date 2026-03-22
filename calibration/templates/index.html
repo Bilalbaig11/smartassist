@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SmartAssist — Calibration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090e;--surface:#0c1018;--card:#111520;--card2:#161c29;
+  --border:#1c2535;--border2:#253045;
+  --accent:#00e5a0;--accent-d:#00b87d;
+  --red:#ff4646;--orange:#ff8c42;--blue:#3ba7ff;--purple:#9d6cff;
+  --text:#dde4f0;--muted:#4a5a72;--muted2:#2e3d52;
+  --ff-d:'Bebas Neue',sans-serif;--ff-m:'DM Mono',monospace;--ff-b:'DM Sans',sans-serif;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--ff-b)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");opacity:.4}
+
+/* Nav */
+nav{height:52px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.6rem;border-bottom:1px solid var(--border);
+  background:rgba(7,9,14,.92);backdrop-filter:blur(16px);position:sticky;top:0;z-index:100}
+.nav-logo{font-family:var(--ff-d);font-size:1.6rem;color:var(--accent);letter-spacing:.05em}
+.nav-sub{font-family:var(--ff-m);font-size:.57rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-left:9px}
+.nav-actions{display:flex;gap:7px}
+.nb{padding:5px 12px;border-radius:5px;font-size:.7rem;font-weight:500;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;transition:all .2s;border:none;font-family:var(--ff-m)}
+.nb-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+.nb-ghost:hover{color:var(--text);border-color:var(--muted)}
+.nb-red{background:rgba(255,70,70,.1);color:var(--red);border:1px solid rgba(255,70,70,.2)}
+.nb-red:hover{background:rgba(255,70,70,.18)}
+.nb-acc{background:var(--accent);color:#000}
+.nb-acc:hover{background:var(--accent-d)}
+
+/* Mode + dataset bar */
+.top-bar{padding:9px 1.6rem;border-bottom:1px solid var(--border);background:var(--surface);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.bar-lbl{font-family:var(--ff-m);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tabs{display:flex;gap:3px;padding:3px;background:var(--bg);border-radius:7px;border:1px solid var(--border)}
+.tab{padding:5px 15px;border-radius:5px;cursor:pointer;font-family:var(--ff-d);font-size:.9rem;
+  letter-spacing:.08em;color:var(--muted);transition:all .18s;border:none;background:transparent}
+.tab:hover{color:var(--text)}
+.tab.sq-on{background:rgba(59,167,255,.12);color:#3ba7ff;border:1px solid rgba(59,167,255,.3)}
+.tab.pl-on{background:rgba(157,108,255,.12);color:#9d6cff;border:1px solid rgba(157,108,255,.3)}
+.tab.tr-on{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.25)}
+.tab.te-on{background:rgba(255,140,66,.1);color:var(--orange);border:1px solid rgba(255,140,66,.25)}
+.bar-counts{margin-left:auto;font-family:var(--ff-m);font-size:.6rem;color:var(--muted)}
+
+/* Steps */
+.steps{display:flex;border-bottom:1px solid var(--border)}
+.stab{flex:1;padding:10px 5px;text-align:center;cursor:pointer;transition:all .18s;
+  font-family:var(--ff-m);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);border-bottom:2px solid transparent}
+.stab:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.stab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.stab .sn{font-family:var(--ff-d);font-size:1.05rem;display:block;line-height:1;margin-bottom:2px}
+.stab .badge{display:inline-block;margin-left:4px;background:var(--accent);color:#000;
+  border-radius:10px;padding:0 5px;font-size:.54rem;font-weight:700;vertical-align:middle}
+
+.page{display:none}.page.active{display:block}
+
+/* Collect page */
+.wrap{max-width:880px;margin:0 auto;padding:24px 1.6rem}
+.sec{font-family:var(--ff-m);font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.info-box{padding:10px 14px;border-radius:7px;border:1px solid var(--border);
+  background:var(--card);font-family:var(--ff-m);font-size:.67rem;color:var(--muted2);
+  line-height:1.6;margin-bottom:14px}
+.info-box strong{color:var(--text)}
+
+.opts{display:flex;align-items:center;gap:11px;margin-bottom:14px;
+  padding:10px 13px;border-radius:7px;border:1px solid var(--border);background:var(--card)}
+.opts label{font-family:var(--ff-m);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);display:flex;align-items:center;gap:7px}
+.opts input[type=number]{width:66px;padding:4px 7px;border-radius:5px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-family:var(--ff-m);font-size:.78rem;outline:none}
+.opts input:focus{border-color:var(--accent)}
+
+.ugrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.uc{padding:22px 18px;border-radius:9px;border:2px dashed var(--border2);background:var(--card);
+  cursor:pointer;transition:all .22s;text-align:center;display:flex;flex-direction:column;
+  align-items:center;gap:7px}
+.uc:hover,.uc.over{border-color:var(--accent);background:rgba(0,229,160,.04)}
+.uc .ic{font-size:2rem;opacity:.6}
+.uc h3{font-family:var(--ff-d);font-size:1.25rem;letter-spacing:.06em}
+.uc p{font-size:.72rem;color:var(--muted);line-height:1.5}
+.uc small{font-family:var(--ff-m);font-size:.58rem;color:var(--muted2)}
+
+/* Progress bar */
+.prog-wrap{margin-bottom:12px;display:none}
+.prog-wrap.show{display:block}
+.prog-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.prog-title{font-family:var(--ff-m);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.prog-count{font-family:var(--ff-m);font-size:.65rem;color:var(--accent)}
+.prog-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden}
+.prog-fill{height:100%;background:var(--accent);transition:width .25s ease;width:0%}
+.prog-stats{display:flex;gap:14px;margin-top:5px}
+.prog-stat{font-family:var(--ff-m);font-size:.6rem;color:var(--muted2)}
+.prog-stat span{color:var(--text)}
+
+/* Webcam */
+.wc{padding:16px;border-radius:9px;border:1px solid var(--border);background:var(--card);margin-bottom:16px}
+.wc-inner{display:flex;gap:14px;align-items:flex-start}
+#wcPrev{width:260px;height:195px;object-fit:cover;border-radius:6px;
+  border:1px solid var(--border);background:#000;flex-shrink:0}
+.wc-ctrl{flex:1;display:flex;flex-direction:column;gap:7px}
+.wc-stat{font-family:var(--ff-m);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.wc-stat.rec{color:var(--red);animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.wc-timer{font-family:var(--ff-d);font-size:1.8rem;color:var(--text);line-height:1;display:none}
+.wc-timer.show{display:block}
+.wcb{padding:7px 13px;border-radius:6px;border:none;cursor:pointer;font-family:var(--ff-m);
+  font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;transition:all .18s}
+.wcb:disabled{opacity:.35;cursor:not-allowed}
+.wcb-s{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
+.wcb-s:hover:not(:disabled){background:rgba(0,229,160,.18)}
+.wcb-r{background:rgba(255,70,70,.1);color:var(--red);border:1px solid rgba(255,70,70,.2)}
+.wcb-r:hover:not(:disabled){background:rgba(255,70,70,.18)}
+.wcb-t{background:rgba(59,167,255,.1);color:var(--blue);border:1px solid rgba(59,167,255,.2)}
+.wcb-t:hover:not(:disabled){background:rgba(59,167,255,.18)}
+
+.sum{display:none;padding:12px 16px;border-radius:8px;border:1px solid var(--border);
+  background:var(--card);align-items:center;justify-content:space-between;margin-top:12px}
+.sum.show{display:flex}
+.sv{font-family:var(--ff-d);font-size:2.2rem;line-height:1}
+.sl{font-family:var(--ff-m);font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+
+/* ── LABEL PAGE ──────────────────────────────────────────────────── */
+.lw{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 195px)}
+.lside{padding:12px;border-right:1px solid var(--border);background:var(--surface);
+  display:flex;flex-direction:column;gap:9px;
+  position:sticky;top:52px;height:calc(100vh - 195px);overflow-y:auto}
+.lt{font-family:var(--ff-d);font-size:1.15rem;letter-spacing:.06em}
+.ls{font-size:.67rem;color:var(--muted);line-height:1.5}
+.ds-ind{padding:5px 9px;border-radius:5px;font-family:var(--ff-m);font-size:.59rem;
+  letter-spacing:.1em;text-transform:uppercase;text-align:center}
+.ds-ind.train{background:rgba(0,229,160,.08);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
+.ds-ind.test{background:rgba(255,140,66,.08);color:var(--orange);border:1px solid rgba(255,140,66,.2)}
+.spill{font-family:var(--ff-m);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);padding:6px;border-radius:5px;border:1px solid var(--border);
+  background:var(--card);text-align:center}
+.spill span{color:var(--accent);font-family:var(--ff-d);font-size:.85rem}
+
+/* Label buttons */
+.lbtns{display:flex;flex-direction:column;gap:4px}
+.lbtn{padding:8px 10px;border-radius:6px;border:1px solid;cursor:pointer;font-family:var(--ff-m);
+  font-size:.61rem;letter-spacing:.08em;text-transform:uppercase;transition:all .18s;
+  text-align:left;display:flex;align-items:center;gap:7px;background:transparent;width:100%}
+.lbtn:hover{transform:translateX(2px)}
+.lbtn .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.lbtn .kbd{margin-left:auto;background:var(--surface);border:1px solid var(--border);
+  border-radius:3px;padding:1px 5px;font-size:.58rem;color:var(--muted);flex-shrink:0}
+.lbtn .ct{font-family:var(--ff-d);font-size:.9rem;color:rgba(255,255,255,.4);margin-left:4px}
+.lbtn.unlabel{color:var(--muted);border-color:var(--border)}
+.lbtn.unlabel:hover{background:var(--card)}
+
+/* Keyboard hint strip */
+.kbd-hint{padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);
+  font-family:var(--ff-m);font-size:.58rem;color:var(--muted2);line-height:1.9}
+.kbd-hint kbd{display:inline-block;background:var(--surface);border:1px solid var(--border2);
+  border-radius:3px;padding:1px 5px;color:var(--muted);margin:0 2px}
+
+.div{height:1px;background:var(--border);margin:1px 0}
+.sbb{padding:6px;border-radius:5px;border:1px solid var(--border);background:transparent;
+  color:var(--muted);font-family:var(--ff-m);font-size:.58rem;letter-spacing:.07em;
+  text-transform:uppercase;cursor:pointer;transition:all .18s;width:100%}
+.sbb:hover{color:var(--text);border-color:var(--border2)}
+.smini{font-family:var(--ff-m);font-size:.6rem;display:flex;flex-direction:column;gap:2px}
+.smr{display:flex;justify-content:space-between;color:var(--muted);padding:2px 0}
+.smr span:last-child{color:var(--text)}
+.gob{padding:8px;border-radius:6px;border:none;background:var(--accent);color:#000;
+  font-family:var(--ff-d);font-size:.88rem;letter-spacing:.1em;cursor:pointer;
+  transition:all .18s;margin-top:auto;width:100%}
+.gob:hover{background:var(--accent-d)}
+.gob:disabled{background:var(--muted2);color:var(--muted);cursor:not-allowed}
+
+/* Frame grid */
+.lmain{padding:12px;overflow-y:auto}
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:8px}
+.fc{border-radius:7px;overflow:hidden;border:2px solid var(--border);cursor:pointer;
+  transition:all .18s;position:relative;background:var(--card)}
+.fc:hover{border-color:var(--border2);transform:translateY(-1px)}
+.fc.sel{border-color:#fff!important;box-shadow:0 0 0 1px #fff}
+.fc.focused{border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--accent)}
+.fc img{width:100%;display:block;aspect-ratio:4/3;object-fit:cover}
+.fcb{padding:3px 6px;font-family:var(--ff-m);font-size:.55rem;letter-spacing:.07em;
+  text-transform:uppercase;display:flex;align-items:center;gap:4px;
+  background:var(--card);border-top:1px solid var(--border)}
+.fcb .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.fc .del{position:absolute;top:3px;right:3px;width:19px;height:19px;
+  background:rgba(0,0,0,.75);border:none;border-radius:3px;color:var(--muted);
+  cursor:pointer;font-size:.65rem;display:none;align-items:center;justify-content:center}
+.fc:hover .del{display:flex}
+.eg{text-align:center;padding:60px 20px;color:var(--muted);grid-column:1/-1}
+.eg .ei{font-size:2.6rem;opacity:.22;display:block;margin-bottom:11px}
+
+/* ── FOCUS OVERLAY (single-frame labeling) ────────────────────── */
+.focus-ov{position:fixed;inset:0;z-index:400;background:rgba(7,9,14,.88);
+  backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;gap:0}
+.focus-ov.open{display:flex}
+
+.focus-img-wrap{flex:1;max-width:calc(100vw - 340px);display:flex;align-items:center;
+  justify-content:center;padding:20px;position:relative}
+.focus-img-wrap img{max-width:100%;max-height:calc(100vh - 100px);border-radius:10px;
+  border:2px solid var(--border2);object-fit:contain;display:block}
+
+/* Nav arrows */
+.foc-arrow{position:absolute;top:50%;transform:translateY(-50%);
+  width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.7);
+  border:1px solid var(--border2);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;color:var(--muted);transition:all .18s;z-index:2}
+.foc-arrow:hover{color:var(--text);border-color:var(--border);background:rgba(0,0,0,.9)}
+.foc-prev{left:8px}
+.foc-next{right:8px}
+.foc-arrow:disabled{opacity:.25;cursor:not-allowed}
+
+.focus-panel{width:300px;flex-shrink:0;background:var(--card);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;gap:0;height:100vh;overflow-y:auto}
+.fp-head{padding:16px;border-bottom:1px solid var(--border)}
+.fp-counter{font-family:var(--ff-d);font-size:2rem;color:var(--accent);line-height:1}
+.fp-of{font-family:var(--ff-m);font-size:.65rem;color:var(--muted)}
+.fp-id{font-family:var(--ff-m);font-size:.58rem;color:var(--muted2);margin-top:3px}
+.fp-cur-lbl{margin-top:8px;padding:5px 9px;border-radius:4px;font-family:var(--ff-m);
+  font-size:.65rem;letter-spacing:.08em;text-transform:uppercase}
+
+.fp-btns{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.fp-sec{font-family:var(--ff-m);font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:4px}
+.flbtn{padding:10px 12px;border-radius:7px;border:1px solid;cursor:pointer;font-family:var(--ff-m);
+  font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;
+  text-align:left;display:flex;align-items:center;gap:8px;background:transparent;width:100%}
+.flbtn:hover{transform:translateX(2px)}
+.flbtn .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.flbtn .fkbd{margin-left:auto;background:var(--surface);border:1px solid var(--border);
+  border-radius:3px;padding:1px 6px;font-size:.6rem;color:var(--muted);flex-shrink:0}
+.flbtn.active-lbl{box-shadow:inset 0 0 0 1px currentColor}
+.flbtn.unlabel{color:var(--muted);border-color:var(--border)}
+.flbtn.unlabel:hover{background:var(--surface)}
+
+.fp-nav{padding:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.fp-nav-row{display:flex;gap:7px}
+.fp-navbtn{flex:1;padding:9px;border-radius:6px;border:1px solid var(--border);background:transparent;
+  color:var(--muted);font-family:var(--ff-m);font-size:.62rem;letter-spacing:.08em;
+  text-transform:uppercase;cursor:pointer;transition:all .18s;display:flex;align-items:center;
+  justify-content:center;gap:5px}
+.fp-navbtn:hover{color:var(--text);border-color:var(--border2)}
+.fp-navbtn:disabled{opacity:.3;cursor:not-allowed}
+.fp-kbdlist{font-family:var(--ff-m);font-size:.58rem;color:var(--muted2);line-height:2;padding:10px 14px;
+  border-top:1px solid var(--border);background:var(--surface)}
+.fp-kbdlist kbd{background:var(--card);border:1px solid var(--border2);border-radius:3px;
+  padding:1px 5px;color:var(--muted);margin-right:4px}
+
+/* Train & results */
+.rw{max-width:1060px;margin:0 auto;padding:24px 1.6rem 60px}
+.tbtn{width:100%;padding:12px;border-radius:9px;border:none;background:var(--accent);
+  color:#000;font-family:var(--ff-d);font-size:1.4rem;letter-spacing:.08em;cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px}
+.tbtn:hover{background:var(--accent-d);box-shadow:0 8px 26px rgba(0,229,160,.16)}
+.tbtn:disabled{background:var(--muted2);color:var(--muted);cursor:not-allowed;box-shadow:none}
+.svm-card{padding:15px 20px;border-radius:9px;border:1px solid var(--border);
+  background:var(--card);display:flex;gap:18px;align-items:center;margin-bottom:16px}
+.svm-n{font-family:var(--ff-d);font-size:3.6rem;line-height:1}
+.svm-n sup{font-size:1.2rem;color:var(--muted)}
+.svm-m{display:flex;flex-direction:column;gap:3px}
+.svm-t{font-family:var(--ff-d);font-size:1.2rem;letter-spacing:.06em}
+.svm-s{font-size:.73rem;color:var(--muted);line-height:1.5}
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px;margin-bottom:18px}
+.tc{padding:13px;border-radius:8px;border:1px solid var(--border);background:var(--card)}
+.tc-c{font-family:var(--ff-d);font-size:1.05rem;letter-spacing:.06em;margin-bottom:3px}
+.tc-f{font-family:var(--ff-m);font-size:.69rem;background:var(--surface);
+  padding:4px 8px;border-radius:4px;margin:5px 0;color:var(--text)}
+.tc-m{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:5px}
+.tc-mi{font-family:var(--ff-m);font-size:.57rem;color:var(--muted);display:flex;flex-direction:column;gap:1px}
+.tc-mi span{color:var(--text);font-size:.67rem}
+.tc-bar{height:3px;border-radius:2px;background:var(--border);overflow:hidden;margin-top:5px}
+.tc-bf{height:100%}
+.tc-a{font-family:var(--ff-m);font-size:.58rem;margin-top:3px}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.pill{padding:3px 9px;border-radius:18px;font-family:var(--ff-m);font-size:.61rem;
+  letter-spacing:.08em;text-transform:uppercase;border:1px solid}
+.psec{margin-bottom:22px}
+.psec h3{font-family:var(--ff-d);font-size:1.35rem;letter-spacing:.06em;margin-bottom:9px}
+.psec img{width:100%;border-radius:8px;border:1px solid var(--border);display:block;cursor:zoom-in}
+.code-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:14px;font-family:var(--ff-m);font-size:.74rem;line-height:1.7;
+  color:#b8d0f0;overflow-x:auto;white-space:pre;position:relative}
+.cpbtn{position:absolute;top:8px;right:8px;padding:4px 10px;border-radius:5px;
+  background:var(--card2);border:1px solid var(--border2);color:var(--muted);
+  font-family:var(--ff-m);font-size:.61rem;cursor:pointer;transition:all .2s}
+.cpbtn:hover{color:var(--text);border-color:var(--accent)}
+
+/* Compare */
+.cmp-header{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.cmp-card{padding:13px 16px;border-radius:9px;border:1px solid var(--border);background:var(--card)}
+.cmp-card.orig{border-color:rgba(74,90,114,.6)}
+.cmp-card.trained{border-color:rgba(0,229,160,.3)}
+.cmp-title{font-family:var(--ff-d);font-size:1.3rem;letter-spacing:.06em;margin-bottom:5px}
+.cmp-title.orig{color:#4a5a72}
+.cmp-title.trained{color:var(--accent)}
+.cmp-acc{font-family:var(--ff-d);font-size:2.9rem;line-height:1}
+.cmp-acc sup{font-size:1.1rem}
+.cmp-tbl{width:100%;border-collapse:collapse;margin-top:10px;font-family:var(--ff-m);font-size:.63rem}
+.cmp-tbl th{color:var(--muted);text-align:left;padding:3px 6px;
+  text-transform:uppercase;letter-spacing:.08em;font-weight:400;border-bottom:1px solid var(--border)}
+.cmp-tbl td{padding:4px 6px;color:var(--text)}
+.cmp-tbl tr:hover td{background:rgba(255,255,255,.02)}
+.thr-tbl{width:100%;border-collapse:collapse;font-family:var(--ff-m);font-size:.63rem}
+.thr-tbl th{color:var(--muted);text-align:left;padding:4px 8px;
+  font-weight:400;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.thr-tbl td{padding:5px 8px;color:var(--text);border-bottom:1px solid rgba(255,255,255,.03)}
+
+/* Image zoom overlay */
+.zoom-ov{position:fixed;inset:0;z-index:600;background:rgba(7,9,14,.94);display:none;
+  align-items:center;justify-content:center;cursor:zoom-out}
+.zoom-ov.open{display:flex}
+.zoom-ov img{max-width:92vw;max-height:92vh;border-radius:8px;border:1px solid var(--border2)}
+
+/* Spinner / toast */
+.spin-ov{position:fixed;inset:0;background:rgba(7,9,14,.6);backdrop-filter:blur(4px);
+  z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.spin-ov.show{display:flex}
+.spin{width:38px;height:38px;border:3px solid var(--border2);border-top-color:var(--accent);
+  border-radius:50%;animation:spin 1s linear infinite}
+.spin-msg{font-family:var(--ff-m);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(70px);
+  background:var(--card);border:1px solid var(--border2);padding:8px 15px;
+  border-radius:7px;font-size:.76rem;z-index:700;transition:transform .28s;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:rgba(255,70,70,.4);color:#ff9a9a}
+.toast.ok{border-color:rgba(0,229,160,.4);color:var(--accent)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div><span class="nav-logo">SmartAssist</span><span class="nav-sub">Calibration</span></div>
+  <div class="nav-actions">
+    <button class="nb nb-ghost" onclick="exportCSV()">↓ CSV</button>
+    <button class="nb nb-red"   onclick="clearAll()">✕ Clear</button>
+  </div>
+</nav>
+
+<div class="top-bar">
+  <span class="bar-lbl">Exercise:</span>
+  <div class="tabs">
+    <button class="tab sq-on" id="mSq" onclick="setMode('squat')">🦵 SQUAT</button>
+    <button class="tab"       id="mPl" onclick="setMode('plank')">💪 PLANK</button>
+  </div>
+  <span style="width:1px;height:22px;background:var(--border);flex-shrink:0"></span>
+  <span class="bar-lbl">Dataset:</span>
+  <div class="tabs">
+    <button class="tab tr-on" id="dsTr" onclick="setDataset('train')">TRAIN</button>
+    <button class="tab"       id="dsTe" onclick="setDataset('test')">TEST</button>
+  </div>
+  <span id="modeDesc" style="font-family:var(--ff-m);font-size:.61rem;color:var(--muted2)">Calibrating: knees inward &amp; outward</span>
+  <div class="bar-counts" style="margin-left:auto">
+    Train: <span id="topTr" style="color:var(--accent)">0</span> &nbsp;·&nbsp;
+    Test: <span id="topTe" style="color:var(--orange)">0</span>
+  </div>
+</div>
+
+<div class="steps">
+  <div class="stab active" id="tab0" onclick="goPage(0)"><span class="sn">01</span>Collect</div>
+  <div class="stab" id="tab1" onclick="goPage(1)">
+    <span class="sn">02</span>Label
+    <span class="badge" id="lbadge" style="display:none">0</span>
+  </div>
+  <div class="stab" id="tab2" onclick="goPage(2)"><span class="sn">03</span>Train</div>
+  <div class="stab" id="tab3" onclick="goPage(3)"><span class="sn">04</span>Compare</div>
+</div>
+
+<!-- ── PAGE 0: COLLECT ───────────────────────────────────────────── -->
+<div class="page active" id="page0">
+<div class="wrap">
+
+  <div class="info-box" id="cInfo">
+    Collecting <strong>TRAIN</strong> frames. Frames where no pose is detected are <strong>discarded automatically</strong>.
+  </div>
+
+  <div class="opts">
+    <label>Interval
+      <input type="number" id="interval" value="0.2" min="0.05" max="5" step="0.05"/>
+      <span style="font-size:.65rem;color:var(--muted2)">sec (0.2 = 5 fps)</span>
+    </label>
+    <span style="flex:1"></span>
+    <span style="font-family:var(--ff-m);font-size:.6rem;color:var(--muted2)">Lower = more frames</span>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="prog-wrap" id="progWrap">
+    <div class="prog-header">
+      <span class="prog-title">Running MediaPipe</span>
+      <span class="prog-count" id="progCount">0 / 0</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-stats">
+      <span class="prog-stat">Kept: <span id="progKept">0</span></span>
+      <span class="prog-stat">Skipped: <span id="progSkip">0</span></span>
+      <span class="prog-stat">Progress: <span id="progPct">0%</span></span>
+    </div>
+  </div>
+
+  <div class="sec">Upload Media</div>
+  <div class="ugrid">
+    <div class="uc" id="dzV" onclick="document.getElementById('inV').click()"
+         ondragover="dzo(event,'dzV')" ondragleave="dzl('dzV')" ondrop="dropV(event)">
+      <span class="ic">🎬</span><h3>Video File</h3>
+      <p>MP4 / MOV / AVI — frames extracted at interval above.</p>
+      <small>up to 500 MB</small>
+    </div>
+    <div class="uc" id="dzI" onclick="document.getElementById('inI').click()"
+         ondragover="dzo(event,'dzI')" ondragleave="dzl('dzI')" ondrop="dropI(event)">
+      <span class="ic">🖼️</span><h3>Still Images</h3>
+      <p>Each image becomes one frame.</p>
+      <small>JPG · PNG · WEBP</small>
+    </div>
+  </div>
+  <input type="file" id="inV" accept="video/*" style="display:none" onchange="onV(event)"/>
+  <input type="file" id="inI" accept="image/*" multiple style="display:none" onchange="onI(event)"/>
+
+  <div class="sec" style="margin-top:18px">Record Webcam</div>
+  <div class="wc">
+    <div class="wc-inner">
+      <video id="wcPrev" autoplay muted playsinline></video>
+      <div class="wc-ctrl">
+        <p class="wc-stat" id="wcStat">Camera off</p>
+        <div class="wc-timer" id="wcTimer">0:00</div>
+        <button class="wcb wcb-s" id="wcSB"  onclick="wcStart()">▶ Start Camera</button>
+        <button class="wcb wcb-r" id="wcRB"  onclick="wcRec()"   disabled style="display:none">● Record</button>
+        <button class="wcb wcb-t" id="wcStB" onclick="wcStop()"  disabled style="display:none">⏹ Stop &amp; Process</button>
+        <p style="font-size:.71rem;color:var(--muted2);line-height:1.6">Record ≥10s per form class (correct + each error type).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sum" id="sumRow">
+    <div style="display:flex;gap:20px">
+      <div><div class="sv" id="sumF" style="color:var(--accent)">0</div><div class="sl">Kept</div></div>
+      <div><div class="sv" id="sumS" style="color:var(--muted)">0</div><div class="sl">Skipped</div></div>
+    </div>
+    <button class="nb nb-acc" style="padding:8px 18px;font-size:.78rem" onclick="goPage(1)">Label Frames →</button>
+  </div>
+
+</div>
+</div>
+
+<!-- ── PAGE 1: LABEL ─────────────────────────────────────────────── -->
+<div class="page" id="page1">
+<div class="lw">
+  <div class="lside">
+    <div><div class="lt">Label Frames</div>
+    <div class="ls" style="margin-top:2px">Click any frame to open focus view</div></div>
+    <div class="ds-ind train" id="dsInd">TRAIN dataset</div>
+    <div class="spill"><span id="selN">0</span> selected (grid)</div>
+    <div class="lbtns" id="lbtns"></div>
+    <div class="div"></div>
+    <div class="kbd-hint">
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> Label<br/>
+      <kbd>←</kbd><kbd>→</kbd> Prev / Next<br/>
+      <kbd>Del</kbd> Delete frame<br/>
+      <kbd>Esc</kbd> Close focus<br/>
+      <kbd>U</kbd> Remove label
+    </div>
+    <div class="div"></div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <button class="sbb" onclick="selAll()">Select All (grid)</button>
+      <button class="sbb" onclick="selClear()">Deselect All</button>
+    </div>
+    <div class="div"></div>
+    <div class="smini" id="smini"></div>
+    <button class="gob" onclick="goPage(2)">Train →</button>
+  </div>
+  <div class="lmain">
+    <div class="fg" id="fg">
+      <div class="eg"><span class="ei">📸</span><p>No frames — collect first.</p></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ── PAGE 2: TRAIN ─────────────────────────────────────────────── -->
+<div class="page" id="page2">
+<div class="rw">
+  <div class="sec">Train on TRAIN dataset</div>
+  <button class="tbtn" id="trainBtn" onclick="doTrain()">⚡ Train SVM + Compute Thresholds</button>
+  <div id="trainOut" style="display:none"></div>
+</div>
+</div>
+
+<!-- ── PAGE 3: COMPARE ───────────────────────────────────────────── -->
+<div class="page" id="page3">
+<div class="rw">
+  <div class="sec">Compare on TEST dataset</div>
+  <button class="tbtn" id="cmpBtn" onclick="doCompare()"
+          style="background:var(--orange);color:#000">
+    📊 Compare: Original vs Trained Thresholds
+  </button>
+  <div id="cmpOut" style="display:none"></div>
+</div>
+</div>
+
+<!-- ── FOCUS OVERLAY ─────────────────────────────────────────────── -->
+<div class="focus-ov" id="focOv">
+  <div class="focus-img-wrap">
+    <button class="foc-arrow foc-prev" id="focPrev" onclick="focNav(-1)">◀</button>
+    <img id="focImg" src="" alt=""/>
+    <button class="foc-arrow foc-next" id="focNext" onclick="focNav(1)">▶</button>
+  </div>
+  <div class="focus-panel">
+    <div class="fp-head">
+      <div class="fp-counter"><span id="fpIdx">1</span></div>
+      <div class="fp-of">of <span id="fpTotal">1</span> frames</div>
+      <div class="fp-id" id="fpId">id: —</div>
+      <div class="fp-cur-lbl" id="fpCurLbl"></div>
+    </div>
+    <div class="fp-btns">
+      <div class="fp-sec">Apply Label</div>
+      <div id="fpBtns"></div>
+    </div>
+    <div class="fp-nav">
+      <div class="fp-nav-row">
+        <button class="fp-navbtn" id="fpPrevBtn" onclick="focNav(-1)">◀ <span style="font-size:.58rem">Prev</span></button>
+        <button class="fp-navbtn" id="fpNextBtn" onclick="focNav(1)"><span style="font-size:.58rem">Next</span> ▶</button>
+      </div>
+      <button class="fp-navbtn" onclick="closeFocus()" style="width:100%">✕ Close (Esc)</button>
+    </div>
+    <div class="fp-kbdlist">
+      <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> — label<br/>
+      <kbd>←</kbd><kbd>→</kbd> — navigate<br/>
+      <kbd>U</kbd> — remove label<br/>
+      <kbd>Del</kbd> — delete frame<br/>
+      <kbd>Esc</kbd> — close
+    </div>
+  </div>
+</div>
+
+<!-- Image zoom -->
+<div class="zoom-ov" id="zoomOv" onclick="closeZoom()">
+  <img id="zoomImg" src="" alt=""/>
+</div>
+
+<div class="spin-ov" id="spinOv"><div class="spin"></div><div class="spin-msg" id="spinMsg">Processing…</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────
+const LABEL_SETS = {
+  squat: [
+    {id:"correct",       label:"Correct Form",    color:"#00e5a0"},
+    {id:"knees_inward",  label:"Knees Caving In",  color:"#ff4646"},
+    {id:"knees_outward", label:"Knees Too Wide",   color:"#3ba7ff"},
+  ],
+  plank: [
+    {id:"correct",       label:"Correct Form",  color:"#00e5a0"},
+    {id:"hips_too_low",  label:"Hips Too Low",  color:"#ff4646"},
+    {id:"hips_too_high", label:"Hips Too High", color:"#9d6cff"},
+  ],
+};
+const MODE_DESC = {
+  squat: "Calibrating: knees inward &amp; outward",
+  plank: "Calibrating: hips too low &amp; too high",
+};
+
+let mode     = "squat";
+let dataset  = "train";
+let trainFr  = [];
+let testFr   = [];
+let selected = new Set();
+let lastIdx  = -1;
+
+// Focus state
+let focIdx = 0;
+let focOpen = false;
+
+function frames()  { return dataset === "train" ? trainFr : testFr; }
+function labels()  { return LABEL_SETS[mode] || []; }
+
+// ─────────────────────────────────────────────────────────────────────
+//  Progress bar via SSE
+// ─────────────────────────────────────────────────────────────────────
+let _sse = null;
+
+function startProgress() {
+  if(_sse) _sse.close();
+  document.getElementById("progWrap").classList.add("show");
+  document.getElementById("progFill").style.width="0%";
+  document.getElementById("progCount").textContent="0 / ?";
+  document.getElementById("progKept").textContent="0";
+  document.getElementById("progSkip").textContent="0";
+  document.getElementById("progPct").textContent="0%";
+  _sse = new EventSource("/api/progress");
+  _sse.onmessage = e => {
+    const p = JSON.parse(e.data);
+    if(p.total > 0) {
+      const pct = Math.round(p.current / p.total * 100);
+      document.getElementById("progFill").style.width = pct + "%";
+      document.getElementById("progCount").textContent = p.current + " / " + p.total;
+      document.getElementById("progKept").textContent  = p.kept;
+      document.getElementById("progSkip").textContent  = p.skipped;
+      document.getElementById("progPct").textContent   = pct + "%";
+    }
+    if(p.done) {
+      document.getElementById("progFill").style.width = "100%";
+      _sse.close(); _sse = null;
+      setTimeout(()=>document.getElementById("progWrap").classList.remove("show"), 1800);
+    }
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Mode & Dataset
+// ─────────────────────────────────────────────────────────────────────
+async function setMode(m) {
+  if(m === mode && trainFr.length === 0 && testFr.length === 0) return;
+  if((trainFr.length>0||testFr.length>0) && !confirm(`Switch to ${m.toUpperCase()}? Clears all frames.`)) return;
+  await fetch("/api/set_mode",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode:m})});
+  mode=m; trainFr=[]; testFr=[]; selected.clear(); focOpen=false;
+  document.getElementById("mSq").className="tab"+(m==="squat"?" sq-on":"");
+  document.getElementById("mPl").className ="tab"+(m==="plank"?" pl-on":"");
+  document.getElementById("modeDesc").innerHTML = MODE_DESC[m];
+  document.getElementById("trainOut").style.display="none";
+  document.getElementById("cmpOut").style.display="none";
+  rebuildLbtns(); rebuildFocusBtns(); updateTopBar(); updateSummary(); renderGrid();
+}
+
+function setDataset(ds) {
+  dataset = ds;
+  document.getElementById("dsTr").className = "tab"+(ds==="train"?" tr-on":"");
+  document.getElementById("dsTe").className = "tab"+(ds==="test"?" te-on":"");
+  const di = document.getElementById("dsInd");
+  di.className = "ds-ind "+(ds==="train"?"train":"test");
+  di.textContent = ds==="train"?"TRAIN dataset":"TEST dataset";
+  const ci = document.getElementById("cInfo");
+  ci.innerHTML = ds==="train"
+    ? "Collecting <strong>TRAIN</strong> frames. Frames without a detected pose are <strong>discarded automatically</strong>."
+    : "Collecting <strong>TEST</strong> frames. Use separate recordings — don't reuse training videos.";
+  selected.clear(); renderGrid(); updateSummary();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Pages
+// ─────────────────────────────────────────────────────────────────────
+function goPage(n) {
+  closeFocus();
+  document.querySelectorAll(".page").forEach((p,i)=>p.classList.toggle("active",i===n));
+  document.querySelectorAll(".stab").forEach((t,i)=>t.classList.toggle("active",i===n));
+  if(n===1) renderGrid();
+  if(n===2) prepTrain();
+  if(n===3) prepCompare();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Upload
+// ─────────────────────────────────────────────────────────────────────
+function dzo(e,id){e.preventDefault();document.getElementById(id).classList.add("over")}
+function dzl(id){document.getElementById(id).classList.remove("over")}
+function dropV(e){e.preventDefault();dzl("dzV");const f=e.dataTransfer.files[0];if(f)doVid(f)}
+function dropI(e){e.preventDefault();dzl("dzI");doImgs(e.dataTransfer.files)}
+function onV(e){const f=e.target.files[0];if(f)doVid(f)}
+function onI(e){if(e.target.files.length)doImgs(e.target.files)}
+
+async function doVid(file) {
+  startProgress();
+  const fd=new FormData();
+  fd.append("video",file);
+  fd.append("interval",document.getElementById("interval").value);
+  fd.append("dataset",dataset);
+  const res=await fetch("/api/process_video",{method:"POST",body:fd});
+  if(!res.ok){const d=await res.json();toast(d.error||"Failed","err");return}
+  const d=await res.json();
+  if(dataset==="train") trainFr.push(...d.frames); else testFr.push(...d.frames);
+  updateSummary(); updateTopBar();
+  toast(`✓ ${d.added} frames kept · ${d.skipped} discarded`,"ok");
+}
+
+async function doImgs(files) {
+  startProgress();
+  const fd=new FormData();
+  for(const f of files) fd.append("images",f);
+  fd.append("dataset",dataset);
+  const res=await fetch("/api/process_images",{method:"POST",body:fd});
+  if(!res.ok){const d=await res.json();toast(d.error||"Failed","err");return}
+  const d=await res.json();
+  if(dataset==="train") trainFr.push(...d.frames); else testFr.push(...d.frames);
+  updateSummary(); updateTopBar();
+  toast(`✓ ${d.added} kept · ${d.skipped} discarded`,"ok");
+}
+
+function updateSummary(){
+  const fr=frames(), det=fr.filter(f=>f.detected).length, skip=fr.filter(f=>!f.detected).length;
+  document.getElementById("sumF").textContent=det;
+  document.getElementById("sumS").textContent=skip;
+  document.getElementById("sumRow").classList.toggle("show",fr.length>0);
+  const all=trainFr.filter(f=>f.label).length+testFr.filter(f=>f.label).length;
+  const b=document.getElementById("lbadge"); b.textContent=all; b.style.display=all>0?"":"none";
+}
+function updateTopBar(){
+  document.getElementById("topTr").textContent=trainFr.length;
+  document.getElementById("topTe").textContent=testFr.length;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Webcam
+// ─────────────────────────────────────────────────────────────────────
+let camStr=null,mRec=null,camCh=[],camRec=false,tInt=null,rs=0;
+
+async function wcStart(){
+  try{
+    camStr=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    document.getElementById("wcPrev").srcObject=camStr;
+    document.getElementById("wcStat").textContent="Camera ready";
+    document.getElementById("wcSB").style.display="none";
+    document.getElementById("wcRB").style.display="";document.getElementById("wcRB").disabled=false;
+  }catch{toast("Camera denied","err")}
+}
+function wcRec(){
+  if(camRec||!camStr)return; camCh=[];rs=0;
+  const mime=MediaRecorder.isTypeSupported("video/webm")?"video/webm":"video/mp4";
+  mRec=new MediaRecorder(camStr,{mimeType:mime});
+  mRec.ondataavailable=e=>{if(e.data.size>0)camCh.push(e.data)};
+  mRec.onstop=async()=>{
+    clearInterval(tInt);document.getElementById("wcTimer").classList.remove("show");
+    const blob=new Blob(camCh,{type:mRec.mimeType});
+    const ext=mRec.mimeType.includes("mp4")?"mp4":"webm";
+    camStr.getTracks().forEach(t=>t.stop());
+    document.getElementById("wcPrev").srcObject=null;
+    ["wcRB","wcStB"].forEach(id=>document.getElementById(id).style.display="none");
+    document.getElementById("wcSB").style.display="";
+    document.getElementById("wcStat").className="wc-stat";
+    document.getElementById("wcStat").textContent="Camera off";
+    await doVid(new File([blob],"webcam."+ext,{type:mRec.mimeType}));
+  };
+  mRec.start(100);camRec=true;
+  document.getElementById("wcStat").className="wc-stat rec";
+  document.getElementById("wcStat").textContent="● Recording";
+  document.getElementById("wcTimer").classList.add("show");
+  tInt=setInterval(()=>{rs++;const m=Math.floor(rs/60),s=String(rs%60).padStart(2,"0");
+    document.getElementById("wcTimer").textContent=`${m}:${s}`;},1000);
+  document.getElementById("wcRB").style.display="none";
+  document.getElementById("wcStB").style.display="";document.getElementById("wcStB").disabled=false;
+}
+function wcStop(){if(camRec){camRec=false;mRec.stop()}}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Label sidebar (grid multi-select)
+// ─────────────────────────────────────────────────────────────────────
+function rebuildLbtns(){
+  const c=document.getElementById("lbtns"); c.innerHTML="";
+  labels().forEach(({id,label,color},i)=>{
+    const b=document.createElement("button");
+    b.className="lbtn"; b.style.color=color; b.style.borderColor=color+"44";
+    b.onclick=()=>applyLabel(id);
+    b.innerHTML=`<span class="dot" style="background:${color}"></span>${label
+      }<span class="kbd">${i+1}</span><span class="ct" id="lc_${id}">0</span>`;
+    c.appendChild(b);
+  });
+  const ub=document.createElement("button");
+  ub.className="lbtn unlabel"; ub.onclick=()=>applyLabel(null);
+  ub.innerHTML='<span class="dot" style="background:#4a5a72"></span>Remove Label<span class="kbd">U</span>';
+  c.appendChild(ub);
+}
+rebuildLbtns();
+
+// ─────────────────────────────────────────────────────────────────────
+//  Frame grid
+// ─────────────────────────────────────────────────────────────────────
+function renderGrid(){
+  const fg=document.getElementById("fg"), fr=frames();
+  if(!fr.length){
+    fg.innerHTML='<div class="eg"><span class="ei">📸</span><p>No frames yet.</p></div>';
+    updateStatsMini(); return;
+  }
+  fg.innerHTML="";
+  fr.forEach((f,idx)=>{
+    const meta=labels().find(l=>l.id===f.label);
+    const col=meta?meta.color:"#2e3d52", lbl=meta?meta.label:"Unlabeled";
+    const card=document.createElement("div");
+    card.className="fc"+(selected.has(f.id)?" sel":"")+(focOpen&&focIdx===idx?" focused":"");
+    card.style.borderColor=meta?col:"var(--border)";
+    card.dataset.id=f.id; card.dataset.idx=idx;
+    card.innerHTML=`<img src="data:image/jpeg;base64,${f.img}" loading="lazy"/>
+      <button class="del" onclick="delFr(event,'${f.id}')">✕</button>
+      <div class="fcb"><span class="dot" style="background:${col}"></span>
+        <span style="color:${col};font-size:.54rem">${lbl}</span></div>`;
+    // click → open focus view
+    card.onclick = e => {
+      if(e.target.classList.contains("del")) return;
+      openFocus(idx);
+    };
+    fg.appendChild(card);
+  });
+  updateSelCount(); updateStatsMini(); updateLblCounts();
+}
+
+function updateSelCount(){document.getElementById("selN").textContent=selected.size}
+function selAll(){selected=new Set(frames().map(f=>f.id));renderGrid()}
+function selClear(){selected.clear();renderGrid();updateSelCount()}
+
+async function applyLabel(lbl, fromFocus=false){
+  const ids = fromFocus ? [frames()[focIdx]?.id].filter(Boolean) : [...selected];
+  if(!ids.length){if(!fromFocus)toast("Select frames first","err");return}
+  await fetch("/api/bulk_label",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ids,label:lbl,dataset})});
+  ids.forEach(id=>{const f=frames().find(x=>x.id===id);if(f)f.label=lbl});
+  renderGrid(); updateSummary();
+  if(fromFocus) { updateFocusPanel(); }
+  else toast(`✓ ${ids.length} → ${lbl||"unlabeled"}`,"ok");
+}
+
+async function delFr(e, id, fromFocus=false){
+  if(e) e.stopPropagation();
+  await fetch("/api/delete_frame",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,dataset})});
+  if(dataset==="train") trainFr=trainFr.filter(f=>f.id!==id);
+  else testFr=testFr.filter(f=>f.id!==id);
+  selected.delete(id);
+  if(fromFocus){
+    const fr=frames();
+    if(fr.length===0){closeFocus();}
+    else{focIdx=Math.min(focIdx,fr.length-1);updateFocusPanel();}
+  }
+  renderGrid(); updateSummary(); updateTopBar();
+}
+
+function updateLblCounts(){
+  const counts={}; frames().forEach(f=>{if(f.label)counts[f.label]=(counts[f.label]||0)+1});
+  labels().forEach(({id})=>{const el=document.getElementById(`lc_${id}`);if(el)el.textContent=counts[id]||0});
+}
+function updateStatsMini(){
+  const fr=frames(), labeled=fr.filter(f=>f.label).length;
+  document.getElementById("smini").innerHTML=`
+    <div class="smr"><span>Total (${dataset})</span><span>${fr.length}</span></div>
+    <div class="smr"><span>Labeled</span><span>${labeled}</span></div>
+    <div class="smr"><span>Unlabeled</span><span style="color:var(--muted)">${fr.length-labeled}</span></div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Focus overlay
+// ─────────────────────────────────────────────────────────────────────
+function rebuildFocusBtns(){
+  const c=document.getElementById("fpBtns"); c.innerHTML="";
+  labels().forEach(({id,label,color},i)=>{
+    const b=document.createElement("button");
+    b.className="flbtn"; b.style.color=color; b.style.borderColor=color+"44";
+    b.id=`flbtn_${id}`;
+    b.onclick=()=>applyLabel(id,true);
+    b.innerHTML=`<span class="dot" style="background:${color}"></span>${label}<span class="fkbd">${i+1}</span>`;
+    c.appendChild(b);
+  });
+  const ub=document.createElement("button");
+  ub.className="flbtn unlabel"; ub.id="flbtn_unlabel";
+  ub.onclick=()=>applyLabel(null,true);
+  ub.innerHTML='<span class="dot" style="background:#4a5a72"></span>Remove Label<span class="fkbd">U</span>';
+  c.appendChild(ub);
+}
+rebuildFocusBtns();
+
+function openFocus(idx){
+  const fr=frames();
+  if(!fr.length) return;
+  focIdx=Math.max(0, Math.min(idx, fr.length-1));
+  focOpen=true;
+  document.getElementById("focOv").classList.add("open");
+  document.getElementById("fpTotal").textContent=fr.length;
+  updateFocusPanel();
+}
+
+function closeFocus(){
+  focOpen=false;
+  document.getElementById("focOv").classList.remove("open");
+  renderGrid(); // remove focused highlight
+}
+
+function focNav(dir){
+  const fr=frames();
+  if(!fr.length) return;
+  focIdx=Math.max(0, Math.min(focIdx+dir, fr.length-1));
+  updateFocusPanel();
+  // scroll grid card into view
+  const cards=document.querySelectorAll(".fc");
+  if(cards[focIdx]) cards[focIdx].scrollIntoView({block:"nearest",behavior:"smooth"});
+  // re-highlight
+  document.querySelectorAll(".fc").forEach((c,i)=>c.classList.toggle("focused",i===focIdx));
+}
+
+function updateFocusPanel(){
+  const fr=frames(), f=fr[focIdx];
+  if(!f) return;
+  document.getElementById("fpIdx").textContent = focIdx+1;
+  document.getElementById("fpTotal").textContent = fr.length;
+  document.getElementById("fpId").textContent   = "id: "+f.id;
+  document.getElementById("focImg").src = "data:image/jpeg;base64,"+f.img;
+  document.getElementById("focPrev").disabled = focIdx===0;
+  document.getElementById("focNext").disabled = focIdx===fr.length-1;
+  document.getElementById("fpPrevBtn").disabled = focIdx===0;
+  document.getElementById("fpNextBtn").disabled = focIdx===fr.length-1;
+
+  // current label badge
+  const meta=labels().find(l=>l.id===f.label);
+  const cl=document.getElementById("fpCurLbl");
+  if(meta){
+    cl.textContent=meta.label;
+    cl.style.background=meta.color+"18";
+    cl.style.color=meta.color;
+    cl.style.border="1px solid "+meta.color+"44";
+  } else {
+    cl.textContent="Unlabeled";
+    cl.style.background="var(--card2)";
+    cl.style.color="var(--muted)";
+    cl.style.border="1px solid var(--border)";
+  }
+
+  // highlight active button
+  labels().forEach(({id})=>{
+    const b=document.getElementById(`flbtn_${id}`);
+    if(b) b.classList.toggle("active-lbl", f.label===id);
+  });
+  const ub=document.getElementById("flbtn_unlabel");
+  if(ub) ub.classList.toggle("active-lbl", !f.label);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Keyboard shortcuts
+// ─────────────────────────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  // Don't fire on inputs
+  if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
+
+  const lbls = labels();
+
+  if(focOpen) {
+    if(e.key==="Escape"){ closeFocus(); return; }
+    if(e.key==="ArrowLeft"||e.key==="ArrowUp")  { e.preventDefault(); focNav(-1); return; }
+    if(e.key==="ArrowRight"||e.key==="ArrowDown"){ e.preventDefault(); focNav(1);  return; }
+    if(e.key==="Delete"||e.key==="Backspace"){
+      const fr=frames(), f=fr[focIdx]; if(f) delFr(null,f.id,true); return;
+    }
+    if(e.key==="u"||e.key==="U"){ applyLabel(null,true); return; }
+    // 1,2,3 keys
+    const n=parseInt(e.key)-1;
+    if(n>=0 && n<lbls.length){ applyLabel(lbls[n].id, true); return; }
+  } else {
+    // Grid mode shortcuts
+    if(e.key==="u"||e.key==="U"){ applyLabel(null,false); return; }
+    const n=parseInt(e.key)-1;
+    if(n>=0 && n<lbls.length){ applyLabel(lbls[n].id, false); return; }
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────
+//  Train
+// ─────────────────────────────────────────────────────────────────────
+function prepTrain(){
+  const n=trainFr.filter(f=>f.label&&f.detected).length;
+  const btn=document.getElementById("trainBtn");
+  btn.disabled=n<6;
+  btn.textContent=n<6?`⚠ Need ≥6 labeled TRAIN frames (have ${n})`:`⚡ Train SVM + Compute Thresholds  (${n} frames)`;
+}
+
+async function doTrain(){
+  spin("Training SVM…");
+  const res=await fetch("/api/train",{method:"POST"});
+  unSpin();
+  if(!res.ok){const d=await res.json();toast(d.error||"Training failed","err");return}
+  const d=await res.json();
+  renderTrainResults(d); toast("Training complete","ok");
+}
+
+function renderTrainResults(d){
+  const out=document.getElementById("trainOut"); out.style.display="";
+  const svm=d.svm||{};
+  const acol=svm.cv_acc>=85?"var(--accent)":svm.cv_acc>=70?"var(--orange)":"var(--red)";
+  const lset=labels();
+
+  const pills=Object.entries(d.label_counts||{}).map(([l,n])=>{
+    const m=lset.find(x=>x.id===l)||{color:"#666",label:l};
+    return `<span class="pill" style="color:${m.color};border-color:${m.color}33;background:${m.color}11">${m.label}: ${n}</span>`;
+  }).join("");
+
+  const tcards=Object.entries(d.thresholds||{}).map(([cls,info])=>{
+    const m=lset.find(x=>x.id===cls)||{color:"#888",label:cls};
+    return `<div class="tc" style="border-color:${m.color}33">
+      <div class="tc-c" style="color:${m.color}">${m.label}</div>
+      <div class="tc-f">${info.feature} ${info.direction} <strong>${info.threshold}</strong></div>
+      <div class="tc-m">
+        <div class="tc-mi">Correct mean<span>${info.correct_mean}</span></div>
+        <div class="tc-mi">Error mean<span>${info.error_mean}</span></div>
+        <div class="tc-mi">N correct<span>${info.n_correct}</span></div>
+        <div class="tc-mi">N error<span>${info.n_error}</span></div>
+      </div>
+      <div class="tc-bar"><div class="tc-bf" style="width:${Math.min(100,info.accuracy)}%;background:${m.color}"></div></div>
+      <div class="tc-a" style="color:${m.color}">${info.accuracy}% 1-D separation accuracy</div>
+    </div>`;
+  }).join("");
+
+  const mkPlot=(b64,title)=>b64?`<div class="psec"><h3>${title}</h3>
+    <img src="data:image/png;base64,${b64}" onclick="zoomImg(this)"/></div>`:"";
+
+  out.innerHTML=`
+    <div class="svm-card">
+      <div class="svm-n" style="color:${acol}">${svm.cv_acc||"—"}<sup>%</sup></div>
+      <div class="svm-m"><div class="svm-t">SVM Cross-Val (Train set)</div>
+        <div class="svm-s">± ${svm.cv_std||0}% std · ${svm.n||0} samples · ${(svm.labels||[]).length} classes<br/>
+          ${d.svm_error?`<span style="color:var(--red)">${d.svm_error}</span>`:"RBF kernel · balanced weights · stratified k-fold"}</div>
+      </div></div>
+    <div class="sec">Training Data</div>
+    <div class="pills">${pills}</div>
+    <div class="sec">Computed Thresholds</div>
+    <div class="tg">${tcards||'<span style="color:var(--muted);font-size:.8rem">Not enough class variety.</span>'}</div>
+    ${mkPlot(d.plots?.confusion,"Training Set — Confusion Matrix")}
+    ${mkPlot(d.plots?.scatter,"Feature Scatter")}
+    ${mkPlot(d.plots?.threshold,"Threshold Visualisation")}
+    <div class="sec">Generated Code</div>
+    <div class="code-block" id="codeBlock"><button class="cpbtn" onclick="copyCode()">Copy</button>${esc(d.code||"")}</div>
+    <div style="display:flex;gap:9px;margin-top:14px">
+      <button class="nb nb-ghost" style="padding:7px 14px;font-size:.74rem" onclick="exportCSV('train')">↓ Train CSV</button>
+      <button class="nb nb-ghost" style="padding:7px 14px;font-size:.74rem" onclick="doTrain()">↺ Retrain</button>
+      <button class="nb nb-acc"   style="padding:7px 14px;font-size:.74rem" onclick="goPage(3)">Compare →</button>
+    </div>`;
+}
+
+function copyCode(){
+  const t=document.getElementById("codeBlock").innerText.replace("Copy","").trim();
+  navigator.clipboard.writeText(t).then(()=>toast("Copied","ok"));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Compare
+// ─────────────────────────────────────────────────────────────────────
+function prepCompare(){
+  const n=testFr.filter(f=>f.label&&f.detected).length;
+  const btn=document.getElementById("cmpBtn");
+  btn.disabled=n<3;
+  btn.textContent=n<3
+    ? `⚠ Need ≥3 labeled TEST frames (have ${n})`
+    : `📊 Compare: Original vs Trained  (${n} test frames)`;
+}
+
+async function doCompare(){
+  spin("Evaluating on test set…");
+  const res=await fetch("/api/compare",{method:"POST"});
+  unSpin();
+  if(!res.ok){const d=await res.json();toast(d.error||"Failed","err");return}
+  const d=await res.json();
+  renderCompare(d); toast("Comparison complete","ok");
+}
+
+function renderCompare(d){
+  const out=document.getElementById("cmpOut"); out.style.display="";
+  const lset=labels(), allLbls=lset.map(l=>l.id);
+  const om=d.orig_metrics||{}, tm=d.trained_metrics||{};
+  const oacol=om.accuracy>=85?"var(--accent)":om.accuracy>=70?"var(--orange)":"var(--red)";
+  const tacol=tm.accuracy>=85?"var(--accent)":tm.accuracy>=70?"var(--orange)":"var(--red)";
+
+  function metRows(metrics, other){
+    return allLbls.map(lbl=>{
+      const mc=(metrics.per_class||{})[lbl]||{precision:0,recall:0,f1:0,support:0};
+      const oc=(other.per_class||{})[lbl]||{f1:0};
+      const lm=lset.find(x=>x.id===lbl)||{color:"#666",label:lbl};
+      const win=mc.f1>oc.f1?"background:rgba(0,229,160,.06)":"";
+      return `<tr style="${win}"><td style="color:${lm.color}">${lm.label}</td>
+        <td>${mc.precision}%</td><td>${mc.recall}%</td><td>${mc.f1}%</td><td>${mc.support}</td></tr>`;
+    }).join("");
+  }
+
+  const allKeys=new Set([...Object.keys(d.original_thresholds||{}),...Object.keys(d.trained_thresholds||{})]);
+  const thrRows=[...allKeys].map(k=>{
+    const ot=d.original_thresholds[k], tt=d.trained_thresholds[k];
+    const lm=lset.find(x=>x.id===k)||{color:"#888",label:k};
+    return `<tr><td style="color:${lm.color}">${lm.label}</td>
+      <td style="font-family:var(--ff-m);font-size:.68rem">${ot?`${ot.feature} ${ot.direction} <strong>${ot.threshold}</strong>`:"<em style='color:var(--muted)'>Not in original</em>"}</td>
+      <td style="font-family:var(--ff-m);font-size:.68rem">${tt?`${tt.feature} ${tt.direction} <strong>${tt.threshold}</strong>`:"-"}</td>
+    </tr>`;
+  }).join("");
+
+  const mkPlot=(b64,title)=>b64?`<div class="psec"><h3>${title}</h3>
+    <img src="data:image/png;base64,${b64}" onclick="zoomImg(this)"/></div>`:"";
+
+  out.innerHTML=`
+    <div class="cmp-header">
+      <div class="cmp-card orig">
+        <div class="cmp-title orig">Original Hardcoded</div>
+        <div class="cmp-acc" style="color:${oacol}">${om.accuracy||"—"}<sup>%</sup></div>
+        <div style="font-family:var(--ff-m);font-size:.63rem;color:var(--muted);margin-top:3px">${d.n_test} test frames</div>
+        <table class="cmp-tbl" style="margin-top:11px">
+          <thead><tr><th>Class</th><th>Prec</th><th>Rec</th><th>F1</th><th>N</th></tr></thead>
+          <tbody>${metRows(om,tm)}</tbody>
+        </table>
+      </div>
+      <div class="cmp-card trained">
+        <div class="cmp-title trained">Trained Calibrated</div>
+        <div class="cmp-acc" style="color:${tacol}">${tm.accuracy||"—"}<sup>%</sup></div>
+        <div style="font-family:var(--ff-m);font-size:.63rem;color:var(--muted);margin-top:3px">${d.n_test} test frames</div>
+        <table class="cmp-tbl" style="margin-top:11px">
+          <thead><tr><th>Class</th><th>Prec</th><th>Rec</th><th>F1</th><th>N</th></tr></thead>
+          <tbody>${metRows(tm,om)}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="sec">Threshold Comparison</div>
+    <div style="padding:13px;border-radius:8px;border:1px solid var(--border);background:var(--card);margin-bottom:18px">
+      <table class="thr-tbl">
+        <thead><tr><th>Class</th><th>Original (hardcoded)</th><th>Trained (calibrated)</th></tr></thead>
+        <tbody>${thrRows}</tbody>
+      </table>
+    </div>
+    ${mkPlot(d.plots?.confusion,"Confusion Matrices")}
+    ${mkPlot(d.plots?.comparison,"Metric Comparison")}
+    ${mkPlot(d.plots?.feature_overlay,"Feature Space + Thresholds")}
+    <div style="display:flex;gap:9px;margin-top:14px">
+      <button class="nb nb-ghost" style="padding:7px 14px;font-size:.74rem" onclick="exportCSV('test')">↓ Test CSV</button>
+      <button class="nb nb-ghost" style="padding:7px 14px;font-size:.74rem" onclick="doCompare()">↺ Re-run</button>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  Image zoom on click
+// ─────────────────────────────────────────────────────────────────────
+function zoomImg(el){
+  document.getElementById("zoomImg").src=el.src;
+  document.getElementById("zoomOv").classList.add("open");
+}
+function closeZoom(){document.getElementById("zoomOv").classList.remove("open")}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeZoom()});
+
+// ─────────────────────────────────────────────────────────────────────
+//  Misc
+// ─────────────────────────────────────────────────────────────────────
+async function exportCSV(ds){
+  const d=ds||dataset;
+  const res=await fetch(`/api/export_csv?dataset=${d}`);
+  if(!res.ok){toast("Nothing to export","err");return}
+  const blob=await res.blob();
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`${mode}_${d}.csv`; a.click(); URL.revokeObjectURL(a.href);
+  toast(`${d} CSV downloaded`,"ok");
+}
+
+async function clearAll(){
+  if(!confirm("Clear ALL frames?")) return;
+  await fetch("/api/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({dataset:"all"})});
+  trainFr=[]; testFr=[]; selected.clear(); closeFocus();
+  updateSummary(); updateTopBar(); renderGrid();
+  document.getElementById("trainOut").style.display="none";
+  document.getElementById("cmpOut").style.display="none";
+  toast("Cleared","ok");
+}
+
+function spin(msg){document.getElementById("spinMsg").textContent=msg;document.getElementById("spinOv").classList.add("show")}
+function unSpin(){document.getElementById("spinOv").classList.remove("show")}
+function toast(msg,type="ok"){const t=document.getElementById("toast");t.textContent=msg;t.className=`toast show ${type}`;setTimeout(()=>t.classList.remove("show"),3200)}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+</script>
+</body>
+</html>
